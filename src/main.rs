@@ -1,10 +1,12 @@
-use macroquad::prelude::*;
+use macroquad::{prelude::*};
+use macroquad::rand::ChooseRandom;
 
 struct Shape {
     size: f32,
     speed: f32,
     x: f32,
     y: f32,
+    color: Color,
 }
 
 #[macroquad::main("My game")]
@@ -17,8 +19,14 @@ async fn main() {
         speed: MOVEMENT_SPEED,
         x: screen_width() / 2.0,
         y: screen_height() / 2.0,
+        color: YELLOW,
     };
     let mut squares = vec![];
+    let squares_colors: Vec<Color> = vec![
+        LIGHTGRAY, GRAY, DARKGRAY, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN,
+        SKYBLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN, WHITE, BLACK,
+        BLANK, MAGENTA,
+    ];
     loop {
         let delta_time = get_frame_time(); // temps passé depuis la dernière frame
         clear_background(BLUE);
@@ -48,6 +56,7 @@ async fn main() {
                 speed: rand::gen_range(50.0, 150.0),
                 x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                 y: -size,
+                color: squares_colors.choose().copied().unwrap(),
             });
         }
         // on les fait tomber
@@ -61,7 +70,7 @@ async fn main() {
                 square.y - square.size / 2.0,
                 square.size,
                 square.size,
-                GREEN,
+                square.color,
             );
         }
         next_frame().await
