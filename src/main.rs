@@ -9,6 +9,7 @@ struct Shape {
     x: f32,
     y: f32,
     color: Color,
+    collided: bool,
 }
 
 impl Shape {
@@ -45,8 +46,11 @@ async fn main() {
         x: screen_width() / 2.0,
         y: screen_height() / 2.0,
         color: YELLOW,
+        collided: false,
     };
     let mut squares = vec![];
+    let mut bullets: Vec<Shape> = vec![];
+
     let squares_colors: Vec<Color> = vec![
         LIGHTGRAY, GRAY, DARKGRAY, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN,
         SKYBLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN, WHITE, BLACK,
@@ -75,11 +79,28 @@ async fn main() {
             // on s'assure qu'on ne déborde pas de l'écran
             circle.x = clamp(circle.x, circle.size, screen_width() - circle.size);
             circle.y = clamp(circle.y, circle.size, screen_height() - circle.size);
+            if is_key_pressed(KeyCode::Space) {
+                bullets.push(Shape {
+                    x: circle.x,
+                    y: circle.y,
+                    speed: circle.speed * 2.0,
+                    size: 5.0,
+                    collided: false,
+                    color: RED,
+                });
+            }
         }
+
+        // on dessine les balles
+        for bullet in &bullets {
+            draw_circle(bullet.x, bullet.y, bullet.size, bullet.color);
+        }
+
+        // on dessine le cercle
         draw_circle(circle.x, circle.y, circle.size, YELLOW);
 
         if !gameover {
-            // dessin des carrés : 5% de chance d'avoir un nouveau carré
+            // ajout des carrés : 5% de chance d'avoir un nouveau carré
             if rand::gen_range(0, 99) >= 95 {
                 let size = rand::gen_range(16.0, 64.0);
                 squares.push(Shape {
@@ -88,6 +109,7 @@ async fn main() {
                     x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                     y: -size,
                     color: squares_colors.choose().copied().unwrap(),
+                    collided: false,
                 });
             }
             // on les fait tomber
@@ -95,7 +117,28 @@ async fn main() {
                 square.y += square.speed * delta_time;
             }
             squares.retain(|square| square.y < screen_height() + square.size); // on vire les carrés hors écran
+
+            // on déplace les balles
+            for bullet in &mut bullets {
+                bullet.y -= bullet.speed * delta_time;
+            }
+
+            // pour tous les carrés pour toutes les balles on regarde s'il y a une collision
+            for square in squares.iter_mut() {
+                for bullet in bullets.iter_mut() {
+                    if bullet.collides_with(square) {
+                        bullet.collided = true;
+                        square.collided = true;
+                    }
+                }
+            }
+
+            bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
+            squares.retain(|square| !square.collided); // on vire les carrés touché
+            bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
         }
+
+        // on dessine les carrés
         for square in &squares {
             draw_rectangle(
                 square.x - square.size / 2.0,
@@ -105,6 +148,9 @@ async fn main() {
                 square.color,
             );
         }
+
+        // test de collison entre les carrés et le cercle
+        // affichage de game over si collison
         if squares.iter().any(|square| circle.collides_with(square)) {
             gameover = true;
             let text = "GAME OVER!";
@@ -128,8 +174,10 @@ async fn main() {
                 text_params,
             );
         }
+        // Redémarrage du jeu si on presse espace
         if gameover && is_key_pressed(KeyCode::Space) {
             squares.clear();
+            bullets.clear();
             circle.x = screen_width() / 2.0;
             circle.y = screen_height() / 2.0;
             gameover = false;
