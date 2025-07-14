@@ -23,8 +23,10 @@ jobs:
             - name: Prepare Deployment Directory
               run: |
                 mkdir -p ./deploy
+                mkdir -p ./deploy/assets
                 cp ./target/wasm32-unknown-unknown/release/basicGame.wasm ./deploy/
                 cp index.html ./deploy/
+                cp assets/*.* ./deploy/assets
             - name: Deploy
               uses: peaceiris/actions-gh-pages@v3
               with:

@@ -1,6 +1,8 @@
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 
+//https://vince59.github.io/basicGame/
+
 struct Shape {
     size: f32,
     speed: f32,
