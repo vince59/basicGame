@@ -11,7 +11,14 @@ struct Shape {
 
 impl Shape {
     fn collides_with(&self, other: &Self) -> bool {
-        self.rect().overlaps(&other.rect())
+        self.circle().overlaps_rect(&other.rect())
+    }
+    fn circle(&self) -> Circle {
+        Circle {
+            x: (self.x),
+            y: (self.y),
+            r: (self.size),
+        }
     }
     fn rect(&self) -> Rect {
         Rect {
@@ -43,6 +50,9 @@ async fn main() {
         SKYBLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN, WHITE, BLACK,
         BLANK, MAGENTA,
     ];
+
+    let font = load_ttf_font("./assets/test.ttf").await.unwrap();
+
     loop {
         let delta_time = get_frame_time(); // temps passé depuis la dernière frame
         clear_background(BLUE);
@@ -96,13 +106,24 @@ async fn main() {
         if squares.iter().any(|square| circle.collides_with(square)) {
             gameover = true;
             let text = "GAME OVER!";
-            let text_dimensions = measure_text(text, None, 50, 1.0);
-            draw_text(
+            let text_params = TextParams {
+                font_size: 50,
+                font: Some(&font),
+                color: RED,
+                font_scale: 1.0,
+                ..Default::default()
+            };
+            let text_dimensions = measure_text(
+                text,
+                text_params.font,
+                text_params.font_size,
+                text_params.font_scale,
+            );
+            draw_text_ex(
                 text,
                 screen_width() / 2.0 - text_dimensions.width / 2.0,
-                screen_height() / 2.0,
-                50.0,
-                RED,
+                screen_height() / 2.0 + text_dimensions.height / 2.0,
+                text_params,
             );
         }
         if gameover && is_key_pressed(KeyCode::Space) {
