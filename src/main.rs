@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
+use std::fs;
 
 //https://vince59.github.io/basicGame/
 
@@ -59,9 +60,30 @@ async fn main() {
 
     let font = load_ttf_font("./assets/test.ttf").await.unwrap();
 
+    let mut score: u32 = 0;
+    let mut high_score: u32 = fs::read_to_string("highscore.dat")
+        .map_or(Ok(0), |i| i.parse::<u32>())
+        .unwrap_or(0);
+
     loop {
         let delta_time = get_frame_time(); // temps passé depuis la dernière frame
         clear_background(BLUE);
+        draw_text(
+            format!("Score: {}", score).as_str(),
+            10.0,
+            35.0,
+            25.0,
+            WHITE,
+        );
+        let highscore_text = format!("High score: {}", high_score);
+        let text_dimensions = measure_text(highscore_text.as_str(), None, 25, 1.0);
+        draw_text(
+            highscore_text.as_str(),
+            screen_width() - text_dimensions.width - 10.0,
+            35.0,
+            25.0,
+            WHITE,
+        );
         // dessin du cercle
         if !gameover {
             if is_key_down(KeyCode::Right) {
@@ -129,6 +151,8 @@ async fn main() {
                     if bullet.collides_with(square) {
                         bullet.collided = true;
                         square.collided = true;
+                        score += square.size.round() as u32;
+                        high_score = high_score.max(score);
                     }
                 }
             }
@@ -152,6 +176,10 @@ async fn main() {
         // test de collison entre les carrés et le cercle
         // affichage de game over si collison
         if squares.iter().any(|square| circle.collides_with(square)) {
+            if score == high_score {
+                fs::write("highscore.dat", high_score.to_string()).ok();
+            }
+
             gameover = true;
             let text = "GAME OVER!";
             let text_params = TextParams {
@@ -176,6 +204,7 @@ async fn main() {
         }
         // Redémarrage du jeu si on presse espace
         if gameover && is_key_pressed(KeyCode::Space) {
+            score = 0;
             squares.clear();
             bullets.clear();
             circle.x = screen_width() / 2.0;
