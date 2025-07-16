@@ -33,6 +33,52 @@ impl Shape {
     }
 }
 
+pub fn display_game_over(font : &Font) {
+    let text = "GAME OVER!";
+    let text_params = TextParams {
+        font_size: 50,
+        font: Some(font),
+        color: RED,
+        font_scale: 1.0,
+        ..Default::default()
+    };
+    let text_dimensions = measure_text(
+        text,
+        text_params.font,
+        text_params.font_size,
+        text_params.font_scale,
+    );
+    draw_text_ex(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 2.0 + text_dimensions.height / 2.0,
+        text_params,
+    );
+}
+
+pub fn display_congratulations(font : &Font) {
+    let text = "CONGRATULATIONS ! you reached a high score";
+    let text_params = TextParams {
+        font_size: 25,
+        font: Some(font),
+        color: YELLOW,
+        font_scale: 1.0,
+        ..Default::default()
+    };
+    let text_dimensions = measure_text(
+        text,
+        text_params.font,
+        text_params.font_size,
+        text_params.font_scale,
+    );
+    draw_text_ex(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 2.0 + text_dimensions.height / 2.0 + 60.0,
+        text_params,
+    );
+}
+
 #[macroquad::main("My game")]
 async fn main() {
     const MOVEMENT_SPEED: f32 = 500.0;
@@ -60,12 +106,11 @@ async fn main() {
     let font = load_ttf_font("./assets/test.ttf").await.unwrap();
 
     let mut score: u32 = 0;
-   // let mut high_score: u32 = fs::read_to_string("highscore.dat")
-   //     .map_or(Ok(0), |i| i.parse::<u32>())
-   //     .unwrap_or(0);
-
     let storage = &mut quad_storage::STORAGE.lock().unwrap();
-    let mut high_score: u32  = storage.get("highscore").and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
+    let mut high_score: u32 = storage
+        .get("highscore")
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(0);
     loop {
         let delta_time = get_frame_time(); // temps passé depuis la dernière frame
         clear_background(BLUE);
@@ -178,32 +223,12 @@ async fn main() {
         // affichage de game over si collison
         if squares.iter().any(|square| circle.collides_with(square)) {
             if score == high_score {
-                //fs::write("highscore.dat", high_score.to_string()).ok();
-                let s= high_score.to_string();
+                let s = high_score.to_string();
                 storage.set("highscore", &s);
+                display_congratulations(&font);
             }
-
             gameover = true;
-            let text = "GAME OVER!";
-            let text_params = TextParams {
-                font_size: 50,
-                font: Some(&font),
-                color: RED,
-                font_scale: 1.0,
-                ..Default::default()
-            };
-            let text_dimensions = measure_text(
-                text,
-                text_params.font,
-                text_params.font_size,
-                text_params.font_scale,
-            );
-            draw_text_ex(
-                text,
-                screen_width() / 2.0 - text_dimensions.width / 2.0,
-                screen_height() / 2.0 + text_dimensions.height / 2.0,
-                text_params,
-            );
+            display_game_over(&font);
         }
         // Redémarrage du jeu si on presse espace
         if gameover && is_key_pressed(KeyCode::Space) {
