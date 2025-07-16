@@ -1,6 +1,5 @@
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
-use std::fs;
 
 //https://vince59.github.io/basicGame/
 
@@ -61,10 +60,12 @@ async fn main() {
     let font = load_ttf_font("./assets/test.ttf").await.unwrap();
 
     let mut score: u32 = 0;
-    let mut high_score: u32 = fs::read_to_string("highscore.dat")
-        .map_or(Ok(0), |i| i.parse::<u32>())
-        .unwrap_or(0);
+   // let mut high_score: u32 = fs::read_to_string("highscore.dat")
+   //     .map_or(Ok(0), |i| i.parse::<u32>())
+   //     .unwrap_or(0);
 
+    let storage = &mut quad_storage::STORAGE.lock().unwrap();
+    let mut high_score: u32  = storage.get("highscore").and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
     loop {
         let delta_time = get_frame_time(); // temps passé depuis la dernière frame
         clear_background(BLUE);
@@ -177,7 +178,9 @@ async fn main() {
         // affichage de game over si collison
         if squares.iter().any(|square| circle.collides_with(square)) {
             if score == high_score {
-                fs::write("highscore.dat", high_score.to_string()).ok();
+                //fs::write("highscore.dat", high_score.to_string()).ok();
+                let s= high_score.to_string();
+                storage.set("highscore", &s);
             }
 
             gameover = true;
