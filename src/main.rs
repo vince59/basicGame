@@ -3,7 +3,7 @@ use macroquad::rand::ChooseRandom;
 
 //https://vince59.github.io/basicGame/
 
-struct Shape {
+pub struct Shape {
     size: f32,
     speed: f32,
     x: f32,
@@ -86,9 +86,79 @@ pub fn display_congratulations(font: &Font) {
     );
 }
 
+pub fn display_score(score: &u32, high_score: &u32) {
+    draw_text(
+        format!("Score: {}", score).as_str(),
+        10.0,
+        35.0,
+        25.0,
+        WHITE,
+    );
+    let highscore_text = format!("High score: {}", high_score);
+    let text_dimensions = measure_text(highscore_text.as_str(), None, 25, 1.0);
+    draw_text(
+        highscore_text.as_str(),
+        screen_width() - text_dimensions.width - 10.0,
+        35.0,
+        25.0,
+        WHITE,
+    );
+}
 
+pub fn display_squares(squares: &Vec<Shape>) {
+    for square in squares {
+        draw_rectangle(
+            square.x - square.size / 2.0,
+            square.y - square.size / 2.0,
+            square.size,
+            square.size,
+            square.color,
+        );
+    }
+}
 
-#[macroquad::main("My game")]
+pub fn display_bullets(bullets: &Vec<Shape>) {
+    for bullet in bullets {
+        draw_circle(bullet.x, bullet.y, bullet.size, bullet.color);
+    }
+}
+
+pub fn display_paused() {
+    let text = "Paused";
+    let text_dimensions = measure_text(text, None, 50, 1.0);
+    draw_text(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 2.0,
+        50.0,
+        WHITE,
+    );
+}
+
+pub fn display_game_name() {
+    let text = "Asteroïd";
+    let text_dimensions = measure_text(text, None, 50, 1.0);
+    draw_text(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        text_dimensions.height + 10.0,
+        50.0,
+        YELLOW,
+    );
+}
+
+pub fn display_press_space() {
+    let text = "Press space";
+    let text_dimensions = measure_text(text, None, 50, 1.0);
+    draw_text(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 2.0,
+        50.0,
+        WHITE,
+    );
+}
+#[macroquad::main("Astéroïd")]
 async fn main() {
     const MOVEMENT_SPEED: f32 = 500.0;
     rand::srand(miniquad::date::now() as u64);
@@ -103,7 +173,7 @@ async fn main() {
         color: YELLOW,
         collided: false,
     };
-    let mut squares = vec![];
+    let mut squares: Vec<Shape> = vec![];
     let mut bullets: Vec<Shape> = vec![];
 
     let squares_colors: Vec<Color> = vec![
@@ -135,34 +205,11 @@ async fn main() {
                     score = 0;
                     game_state = GameState::Playing;
                 }
-                let text = "Press space";
-                let text_dimensions = measure_text(text, None, 50, 1.0);
-                draw_text(
-                    text,
-                    screen_width() / 2.0 - text_dimensions.width / 2.0,
-                    screen_height() / 2.0,
-                    50.0,
-                    WHITE,
-                );
+                display_press_space();
             }
             GameState::Playing => {
                 let delta_time = get_frame_time(); // temps passé depuis la dernière frame
-                draw_text(
-                    format!("Score: {}", score).as_str(),
-                    10.0,
-                    35.0,
-                    25.0,
-                    WHITE,
-                );
-                let highscore_text = format!("High score: {}", high_score);
-                let text_dimensions = measure_text(highscore_text.as_str(), None, 25, 1.0);
-                draw_text(
-                    highscore_text.as_str(),
-                    screen_width() - text_dimensions.width - 10.0,
-                    35.0,
-                    25.0,
-                    WHITE,
-                );
+                display_score(&score, &high_score);
                 // dessin du cercle
                 if is_key_down(KeyCode::Right) {
                     circle.x += circle.speed * delta_time;
@@ -194,9 +241,7 @@ async fn main() {
                 }
 
                 // on dessine les balles
-                for bullet in &bullets {
-                    draw_circle(bullet.x, bullet.y, bullet.size, bullet.color);
-                }
+                display_bullets(&bullets);
 
                 // on dessine le cercle
                 draw_circle(circle.x, circle.y, circle.size, YELLOW);
@@ -241,24 +286,11 @@ async fn main() {
                 bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
 
                 // on dessine les carrés
-                for square in &squares {
-                    draw_rectangle(
-                        square.x - square.size / 2.0,
-                        square.y - square.size / 2.0,
-                        square.size,
-                        square.size,
-                        square.color,
-                    );
-                }
+                display_squares(&squares);
 
                 // test de collison entre les carrés et le cercle
                 // affichage de game over si collison
                 if squares.iter().any(|square| circle.collides_with(square)) {
-                    if score == high_score {
-                        let s = high_score.to_string();
-                        storage.set("highscore", &s);
-                        display_congratulations(&font);
-                    }
                     game_state = GameState::GameOver;
                 }
             }
@@ -266,24 +298,12 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) {
                     game_state = GameState::Playing;
                 }
-                let text = "Paused";
-                let text_dimensions = measure_text(text, None, 50, 1.0);
-                draw_text(
-                    text,
-                    screen_width() / 2.0 - text_dimensions.width / 2.0,
-                    screen_height() / 2.0,
-                    50.0,
-                    WHITE,
-                );
-                let text = "Asteroïd";
-                let text_dimensions = measure_text(text, None, 50, 1.0);
-                draw_text(
-                    text,
-                    screen_width() / 2.0 - text_dimensions.width / 2.0,
-                    text_dimensions.height+10.0,
-                    50.0,
-                    YELLOW,
-                );
+                display_squares(&squares);
+                draw_circle(circle.x, circle.y, circle.size, YELLOW);
+                display_score(&score, &high_score);
+                display_bullets(&bullets);
+                display_paused();
+                display_game_name();
             }
             GameState::GameOver => {
                 // Redémarrage du jeu si on presse espace
@@ -291,9 +311,13 @@ async fn main() {
                     game_state = GameState::MainMenu;
                 }
                 display_game_over(&font);
+                if score == high_score {
+                    let s = high_score.to_string();
+                    storage.set("highscore", &s);
+                    display_congratulations(&font);
+                }
             }
         }
-
         next_frame().await
     }
 }
