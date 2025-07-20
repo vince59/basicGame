@@ -160,6 +160,20 @@ pub fn display_press_space() {
 }
 #[macroquad::main("Astéroïd")]
 async fn main() {
+    const FRAGMENT_SHADER: &str = include_str!("starfield-shader.glsl");
+    const VERTEX_SHADER: &str = "#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
+attribute vec4 color0;
+varying float iTime;
+uniform mat4 Model;
+uniform mat4 Projection;
+uniform vec4 _Time;
+void main() {
+gl_Position = Projection * Model * vec4(position, 1);
+iTime = _Time.x;
+}
+";
     const MOVEMENT_SPEED: f32 = 500.0;
     rand::srand(miniquad::date::now() as u64);
 
@@ -190,8 +204,40 @@ async fn main() {
         .get("highscore")
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(0);
+    let mut direction_modifier: f32 = 0.0;
+    let render_target = render_target(320, 150);
+    render_target.texture.set_filter(FilterMode::Nearest);
+    let material = load_material(
+        ShaderSource::Glsl {
+            vertex: VERTEX_SHADER,
+            fragment: FRAGMENT_SHADER,
+        },
+        MaterialParams {
+            uniforms: vec![
+                UniformDesc::new("iResolution", UniformType::Float2),
+                UniformDesc::new("direction_modifier", UniformType::Float1),
+            ],
+            ..Default::default()
+        },
+    )
+    .unwrap();
     loop {
-        clear_background(BLUE);
+        clear_background(BLACK);
+        material.set_uniform("iResolution", (screen_width(), screen_height()));
+        material.set_uniform("direction_modifier", direction_modifier);
+        gl_use_material(&material);
+        draw_texture_ex(
+            &render_target.texture,
+            0.,
+            0.,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(screen_width(), screen_height())),
+                ..Default::default()
+            },
+        );
+        gl_use_default_material();
+
         match game_state {
             GameState::MainMenu => {
                 if is_key_pressed(KeyCode::Escape) {
@@ -213,9 +259,11 @@ async fn main() {
                 // dessin du cercle
                 if is_key_down(KeyCode::Right) {
                     circle.x += circle.speed * delta_time;
+                    direction_modifier += 0.05 * delta_time;
                 }
                 if is_key_down(KeyCode::Left) {
                     circle.x -= circle.speed * delta_time;
+                    direction_modifier -= 0.05 * delta_time;
                 }
                 if is_key_down(KeyCode::Down) {
                     circle.y += circle.speed * delta_time;
