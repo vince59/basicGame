@@ -86,6 +86,8 @@ pub fn display_congratulations(font: &Font) {
     );
 }
 
+
+
 #[macroquad::main("My game")]
 async fn main() {
     const MOVEMENT_SPEED: f32 = 500.0;
@@ -272,6 +274,15 @@ async fn main() {
                     screen_height() / 2.0,
                     50.0,
                     WHITE,
+                );
+                let text = "Asteroïd";
+                let text_dimensions = measure_text(text, None, 50, 1.0);
+                draw_text(
+                    text,
+                    screen_width() / 2.0 - text_dimensions.width / 2.0,
+                    text_dimensions.height+10.0,
+                    50.0,
+                    YELLOW,
                 );
             }
             GameState::GameOver => {
