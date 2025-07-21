@@ -136,7 +136,7 @@ pub fn display_paused() {
 }
 
 pub fn display_game_name() {
-    let text = "Asteroïd";
+    let text = "Asteroïds";
     let text_dimensions = measure_text(text, None, 50, 1.0);
     draw_text(
         text,
