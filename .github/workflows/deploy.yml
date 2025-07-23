@@ -1,54 +1,37 @@
 name: Build and Deploy
-
 on:
-  push:
-    branches:
-      - main
-
+    push:
+        branches:
+            - main # If your default branch is named something else, change this
 permissions:
-  contents: write
-  pages: write
-
+    contents: write
+    pages: write
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+            - name: Install Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                    toolchain: stable
+                    target: wasm32-unknown-unknown
+                    override: true
+            - name: Build 
+              run: cargo build --release --target wasm32-unknown-unknown
+            - name: Prepare Deployment Directory
+              run: |
+                mkdir -p ./deploy
+                mkdir -p ./deploy/assets
+                cp ./target/wasm32-unknown-unknown/release/basicGame.wasm ./deploy/
+                cp index.html ./deploy/
+                cp assets/*.* ./deploy/assets
+                cp quad-storage.js ./deploy/
+                cp sapp_jsutils.js ./deploy/
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
-
-      - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli
-
-      - name: Build in debug mode (with symbols)
-        run: cargo build --target wasm32-unknown-unknown
-
-      - name: Run wasm-bindgen (with source map)
-        run: |
-          mkdir -p ./deploy
-          wasm-bindgen ./target/wasm32-unknown-unknown/debug/basicGame.wasm \
-            --target web \
-            --out-dir ./deploy \
-            --debug \
-            --source-map
-
-      - name: Copy static files
-        run: |
-          mkdir -p ./deploy/assets
-          cp index.html ./deploy/
-          cp assets/*.* ./deploy/assets/
-          cp quad-storage.js ./deploy/
-          cp sapp_jsutils.js ./deploy/
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy
+            - name: Deploy
+              uses: peaceiris/actions-gh-pages@v3
+              with:
+                github_token: ${{ secrets.GITHUB_TOKEN }}
+                publish_dir: ./deploy
