@@ -1,5 +1,6 @@
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
+use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
 
 //https://vince59.github.io/basicGame/
 
@@ -38,6 +39,28 @@ enum GameState {
     Playing,
     Paused,
     GameOver,
+}
+
+pub fn particle_explosion() -> particles::EmitterConfig {
+    particles::EmitterConfig {
+        local_coords: false,
+        one_shot: true,
+        emitting: true,
+        lifetime: 0.6,
+        lifetime_randomness: 0.3,
+        explosiveness: 0.65,
+        initial_direction_spread: 2.0 * std::f32::consts::PI,
+        initial_velocity: 300.0,
+        initial_velocity_randomness: 0.8,
+        size: 3.0,
+        size_randomness: 0.3,
+        colors_curve: ColorCurve {
+            start: RED,
+            mid: ORANGE,
+            end: RED,
+        },
+        ..Default::default()
+    }
 }
 
 pub fn display_game_over(font: &Font) {
@@ -190,6 +213,8 @@ async fn main() {
         .get("highscore")
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(0);
+    let mut explosions: Vec<(Emitter, Vec2)> = vec![];
+
     loop {
         clear_background(BLUE);
         match game_state {
@@ -204,6 +229,7 @@ async fn main() {
                     circle.y = screen_height() / 2.0;
                     score = 0;
                     game_state = GameState::Playing;
+                    explosions.clear();
                 }
                 display_press_space();
             }
@@ -277,6 +303,13 @@ async fn main() {
                             square.collided = true;
                             score += square.size.round() as u32;
                             high_score = high_score.max(score);
+                            explosions.push((
+                                Emitter::new(EmitterConfig {
+                                    amount: square.size.round() as u32 * 2,
+                                    ..particle_explosion()
+                                }),
+                                vec2(square.x, square.y),
+                            ));
                         }
                     }
                 }
@@ -284,9 +317,13 @@ async fn main() {
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
                 squares.retain(|square| !square.collided); // on vire les carrés touché
                 bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
+                explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 // on dessine les carrés
                 display_squares(&squares);
+                for (explosion, coords) in explosions.iter_mut() {
+                    explosion.draw(*coords);
+                }
 
                 // test de collison entre les carrés et le cercle
                 // affichage de game over si collison
