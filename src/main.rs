@@ -217,39 +217,41 @@ async fn main() {
 
     let texture: Texture2D = load_texture("assets/chess.png").await.unwrap();
 
-    let lens_material = load_material(
+    let mut direction_modifier: f32 = 0.0;
+    let render_target = render_target(320, 150);
+    render_target.texture.set_filter(FilterMode::Nearest);
+
+    let material = load_material(
         ShaderSource::Glsl {
             vertex: LENS_VERTEX_SHADER,
             fragment: LENS_FRAGMENT_SHADER,
         },
         MaterialParams {
-            uniforms: vec![UniformDesc::new("Center", UniformType::Float2)],
+            uniforms: vec![
+                UniformDesc::new("Center", UniformType::Float2),
+                UniformDesc::new("iResolution", UniformType::Float2),
+                UniformDesc::new("direction_modifier", UniformType::Float1),
+            ],
             ..Default::default()
         },
     )
     .unwrap();
 
-
     loop {
-        clear_background(WHITE);
+        clear_background(BLACK);
+        gl_use_material(&material);
         draw_texture_ex(
-            &texture,
-            0.0,
-            0.0,
+            &render_target.texture,
+            0.,
+            0.,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(screen_width(), screen_height())),
                 ..Default::default()
             },
         );
-
-        let lens_center = mouse_position();
-
-        lens_material.set_uniform("Center", lens_center);
-
-        gl_use_material(&lens_material);
-        draw_circle(lens_center.0, lens_center.1, 250.0, RED);
         gl_use_default_material();
+
         match game_state {
             GameState::MainMenu => {
                 if is_key_pressed(KeyCode::Escape) {
