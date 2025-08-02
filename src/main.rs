@@ -215,7 +215,7 @@ async fn main() {
         .unwrap_or(0);
     let mut explosions: Vec<(Emitter, Vec2)> = vec![];
 
-    let texture: Texture2D = load_texture("assets/chess.png").await.unwrap();
+    let texture = Texture2D::from_image(&Image::gen_image_color(1, 1, WHITE));
 
     let material = load_material(
         ShaderSource::Glsl {
@@ -223,6 +223,7 @@ async fn main() {
             fragment: FRAGMENT_SHADER,
         },
         MaterialParams {
+             uniforms: vec![UniformDesc::new("time", UniformType::Float1)],
             ..Default::default()
         },
     )
@@ -230,7 +231,9 @@ async fn main() {
 
 
     loop {
-        clear_background(WHITE);
+        clear_background(BLACK);
+        material.set_uniform("time", get_time() as f32);
+        gl_use_material(&material);
         draw_texture_ex(
             &texture,
             0.0,
@@ -241,8 +244,7 @@ async fn main() {
                 ..Default::default()
             },
         );
-
-        gl_use_material(&material);
+        //draw_rectangle(0.0, 0.0, screen_width(), screen_height(), WHITE);
         gl_use_default_material();
         match game_state {
             GameState::MainMenu => {
@@ -387,14 +389,28 @@ async fn main() {
 }
 
 const FRAGMENT_SHADER: &'static str = r#" #version 100
-  void main() {
-    gl_FragColor = vec4(0.18, 0.54, 0.34, 1.0);
-  }
+precision mediump float;
+
+varying vec2 uv;
+
+void main() {
+    if (uv.x > 0.4 && uv.x < 0.6 && uv.y > 0.4 && uv.y < 0.6) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // rouge
+    } else {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // noir
+    }
+}
 "#;
 
 const VERTEX_SHADER: &'static str = r#" #version 100
-  void main() {
-    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
-    gl_PointSize = 64.0;
-  }
+attribute vec3 position;
+attribute vec2 texcoord;
+
+varying vec2 uv;
+
+void main() {
+    vec2 pos = position.xy * 2.0 - 1.0; // Passe en -1..1 (clip space)
+    gl_Position = vec4(pos, 0.0, 1.0);
+    uv = position.xy; // <--- On force uv à être entre 0..1
+}
 "#;
