@@ -224,7 +224,8 @@ async fn main() {
             fragment: FRAGMENT_SHADER,
         },
         MaterialParams {
-            uniforms: vec![UniformDesc::new("time", UniformType::Float1)],
+            uniforms: vec![UniformDesc::new("time", UniformType::Float1),
+            UniformDesc::new("screen_size", UniformType::Float2)],
             ..Default::default()
         },
     )
@@ -235,7 +236,7 @@ async fn main() {
 
         gl_use_material(&material);
         material.set_uniform("time", get_time() as f32);
-
+        material.set_uniform("screen_size", vec2(screen_width(), screen_height()));
         draw_texture_ex(
             &texture,
             0.0,
@@ -391,23 +392,44 @@ async fn main() {
 }
 
 const VERTEX_SHADER: &str = r#" #version 100
-attribute vec3 position; // position x,y du sommet donné par le rust
-varying vec2 uv; // coordonnée de la texture qui sera transmise au fragment
+attribute vec3 position;
+attribute vec2 texcoord;
 
-void main() { // appelé pour chaque sommets donc 4 fois ici
-    vec2 pos = position.xy * 2.0 - 1.0; // Passe en -1..1 (clip space)
-    gl_Position = vec4(pos, 0.0, 1.0);
-    uv = position.xy;
+uniform vec2 screen_size;
+varying vec2 uv;
+
+void main() {
+    uv = texcoord;
+
+    // Convertit la position (en pixels) en clip-space [-1, 1]
+    vec2 clip_pos = (position.xy / screen_size) * 2.0 - 1.0;
+    clip_pos.y = -clip_pos.y; // Inversion verticale pour OpenGL
+
+    gl_Position = vec4(clip_pos, 0.0, 1.0);
 }
 "#;
 
 const FRAGMENT_SHADER: &str = r#" #version 100
 precision mediump float;
+
 varying vec2 uv;
-uniform float time; // paramètre donné par le rust
+uniform float time;
+
+// Fonction pseudo-aléatoire
+float random(vec2 st) {
+    return fract(sin(dot(st, vec2(12.9898, 78.233)) + time) * 43758.5453);
+}
 
 void main() {
-    float brightness = abs(sin(time));
-    gl_FragColor = vec4(brightness, brightness, brightness, 1.0);
+    // Crée une grille virtuelle 100x100
+    vec2 cell = floor(uv * 100.0);
+
+    float r = random(cell);
+
+    if (r > 0.95) {
+        gl_FragColor = vec4(1.0, 0.2, 0.2, 1.0); // Pixel rouge clair
+    } else {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Fond noir
+    }
 }
 "#;
