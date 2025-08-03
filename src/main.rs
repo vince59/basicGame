@@ -1,7 +1,7 @@
+use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
-//use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
 
 //https://vince59.github.io/basicGame/
@@ -126,7 +126,11 @@ pub fn display_score(score: &u32, high_score: &u32) {
     );
 }
 
-pub fn display_squares(squares: &Vec<Shape>,enemy_small_sprite: &AnimatedSprite, enemy_small_texture: &Texture2D) {
+pub fn display_squares(
+    squares: &Vec<Shape>,
+    enemy_small_sprite: &AnimatedSprite,
+    enemy_small_texture: &Texture2D,
+) {
     let enemy_frame = enemy_small_sprite.frame();
     for square in squares {
         draw_texture_ex(
@@ -313,6 +317,18 @@ async fn main() {
 
     build_textures_atlas();
 
+    let theme_music = load_sound("8bit-spaceshooter.ogg").await.unwrap();
+    let sound_explosion = load_sound("explosion.wav").await.unwrap();
+    let sound_laser = load_sound("laser.wav").await.unwrap();
+
+    play_sound(
+        &theme_music,
+        PlaySoundParams {
+            looped: true,
+            volume: 1.,
+        },
+    );
+
     let img = Image::gen_image_color(1, 1, WHITE);
     let texture = Texture2D::from_image(&img);
 
@@ -396,6 +412,7 @@ async fn main() {
                         collided: false,
                         color: RED,
                     });
+                    play_sound_once(&sound_laser);
                 }
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
@@ -472,7 +489,7 @@ async fn main() {
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 // on dessine les carrés
-                display_squares(&squares,&enemy_small_sprite,&enemy_small_texture);
+                display_squares(&squares, &enemy_small_sprite, &enemy_small_texture);
                 for (explosion, coords) in explosions.iter_mut() {
                     explosion.draw(*coords);
                 }
@@ -487,7 +504,7 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) {
                     game_state = GameState::Playing;
                 }
-                display_squares(&squares,&enemy_small_sprite,&enemy_small_texture);
+                display_squares(&squares, &enemy_small_sprite, &enemy_small_texture);
                 //draw_circle(circle.x, circle.y, circle.size, YELLOW);
 
                 let ship_frame = ship_sprite.frame();
