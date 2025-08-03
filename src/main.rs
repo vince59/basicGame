@@ -1,7 +1,6 @@
 use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
-use macroquad::rand::ChooseRandom;
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
 
 //https://vince59.github.io/basicGame/
@@ -11,7 +10,6 @@ pub struct Shape {
     speed: f32,
     x: f32,
     y: f32,
-    color: Color,
     collided: bool,
 }
 
@@ -126,20 +124,20 @@ pub fn display_score(score: &u32, high_score: &u32) {
     );
 }
 
-pub fn display_squares(
-    squares: &Vec<Shape>,
+pub fn display_enemies(
+    enemies: &Vec<Shape>,
     enemy_small_sprite: &AnimatedSprite,
     enemy_small_texture: &Texture2D,
 ) {
     let enemy_frame = enemy_small_sprite.frame();
-    for square in squares {
+    for enemy in enemies {
         draw_texture_ex(
             enemy_small_texture,
-            square.x - square.size / 2.0,
-            square.y - square.size / 2.0,
+            enemy.x - enemy.size / 2.0,
+            enemy.y - enemy.size / 2.0,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(square.size, square.size)),
+                dest_size: Some(vec2(enemy.size, enemy.size)),
                 source: Some(enemy_frame.source_rect),
                 ..Default::default()
             },
@@ -210,22 +208,15 @@ async fn main() {
 
     let mut game_state = GameState::MainMenu;
 
-    let mut circle = Shape {
+    let mut ship = Shape {
         size: 16.0,
         speed: MOVEMENT_SPEED,
         x: screen_width() / 2.0,
         y: screen_height() / 2.0,
-        color: YELLOW,
         collided: false,
     };
-    let mut squares: Vec<Shape> = vec![];
+    let mut enemies: Vec<Shape> = vec![];
     let mut bullets: Vec<Shape> = vec![];
-
-    let squares_colors: Vec<Color> = vec![
-        LIGHTGRAY, GRAY, DARKGRAY, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN,
-        SKYBLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN, WHITE, BLACK,
-        BLANK, MAGENTA,
-    ];
 
     let font = load_ttf_font("./assets/test.ttf").await.unwrap();
 
@@ -315,19 +306,21 @@ async fn main() {
         .expect("Couldn't load file");
     enemy_small_texture.set_filter(FilterMode::Nearest);
 
+    let enemy_medium_texture: Texture2D = load_texture("enemy-medium.png")
+        .await
+        .expect("Couldn't load file");
+    enemy_medium_texture.set_filter(FilterMode::Nearest);
+
+    let enemy_big_texture: Texture2D = load_texture("enemy-big.png")
+        .await
+        .expect("Couldn't load file");
+    enemy_big_texture.set_filter(FilterMode::Nearest);
+
     build_textures_atlas();
 
     let theme_music = load_sound("8bit-spaceshooter.ogg").await.unwrap();
     let sound_explosion = load_sound("explosion.wav").await.unwrap();
     let sound_laser = load_sound("laser.wav").await.unwrap();
-
-    play_sound(
-        &theme_music,
-        PlaySoundParams {
-            looped: true,
-            volume: 1.,
-        },
-    );
 
     let img = Image::gen_image_color(1, 1, WHITE);
     let texture = Texture2D::from_image(&img);
@@ -371,11 +364,18 @@ async fn main() {
                     std::process::exit(0);
                 }
                 if is_key_pressed(KeyCode::Space) {
-                    squares.clear();
+                    enemies.clear();
                     bullets.clear();
-                    circle.x = screen_width() / 2.0;
-                    circle.y = screen_height() / 2.0;
+                    ship.x = screen_width() / 2.0;
+                    ship.y = screen_height() / 2.0;
                     score = 0;
+                    play_sound(
+                        &theme_music,
+                        PlaySoundParams {
+                            looped: true,
+                            volume: 1.,
+                        },
+                    );
                     game_state = GameState::Playing;
                     explosions.clear();
                 }
@@ -384,33 +384,32 @@ async fn main() {
             GameState::Playing => {
                 let delta_time = get_frame_time(); // temps passé depuis la dernière frame
                 display_score(&score, &high_score);
-                // dessin du cercle
+                // dessin du vaisseau
                 ship_sprite.set_animation(0);
                 if is_key_down(KeyCode::Right) {
-                    circle.x += circle.speed * delta_time;
+                    ship.x += ship.speed * delta_time;
                     ship_sprite.set_animation(2);
                 }
                 if is_key_down(KeyCode::Left) {
-                    circle.x -= circle.speed * delta_time;
+                    ship.x -= ship.speed * delta_time;
                     ship_sprite.set_animation(1);
                 }
                 if is_key_down(KeyCode::Down) {
-                    circle.y += circle.speed * delta_time;
+                    ship.y += ship.speed * delta_time;
                 }
                 if is_key_down(KeyCode::Up) {
-                    circle.y -= circle.speed * delta_time;
+                    ship.y -= ship.speed * delta_time;
                 }
                 // on s'assure qu'on ne déborde pas de l'écran
-                circle.x = clamp(circle.x, circle.size, screen_width() - circle.size);
-                circle.y = clamp(circle.y, circle.size, screen_height() - circle.size);
+                ship.x = clamp(ship.x, ship.size, screen_width() - ship.size);
+                ship.y = clamp(ship.y, ship.size, screen_height() - ship.size);
                 if is_key_pressed(KeyCode::Space) {
                     bullets.push(Shape {
-                        x: circle.x,
-                        y: circle.y - 24.0,
-                        speed: circle.speed * 2.0,
+                        x: ship.x,
+                        y: ship.y - 24.0,
+                        speed: ship.speed * 2.0,
                         size: 32.0,
                         collided: false,
-                        color: RED,
                     });
                     play_sound_once(&sound_laser);
                 }
@@ -422,12 +421,11 @@ async fn main() {
                 display_bullets(&bullets, &bullet_sprite, &bullet_texture);
 
                 // on dessine le vaisseau
-
                 let ship_frame = ship_sprite.frame();
                 draw_texture_ex(
                     &ship_texture,
-                    circle.x - ship_frame.dest_size.x,
-                    circle.y - ship_frame.dest_size.y,
+                    ship.x - ship_frame.dest_size.x,
+                    ship.y - ship_frame.dest_size.y,
                     WHITE,
                     DrawTextureParams {
                         dest_size: Some(ship_frame.dest_size * 2.0),
@@ -440,44 +438,43 @@ async fn main() {
                 bullet_sprite.update();
                 enemy_small_sprite.update();
 
-                // ajout des carrés : 5% de chance d'avoir un nouveau carré
+                // ajout des ennemies : 5% de chance d'avoir un nouvel ennemie
                 if rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0);
-                    squares.push(Shape {
+                    enemies.push(Shape {
                         size,
                         speed: rand::gen_range(50.0, 150.0),
                         x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                         y: -size,
-                        color: squares_colors.choose().copied().unwrap(),
                         collided: false,
                     });
                 }
                 // on les fait tomber
-                for square in &mut squares {
-                    square.y += square.speed * delta_time;
+                for enemy in &mut enemies {
+                    enemy.y += enemy.speed * delta_time;
                 }
-                squares.retain(|square| square.y < screen_height() + square.size); // on vire les carrés hors écran
+                enemies.retain(|enemy| enemy.y < screen_height() + enemy.size); // on vire les ennemie hors écran
 
                 // on déplace les balles
                 for bullet in &mut bullets {
                     bullet.y -= bullet.speed * delta_time;
                 }
 
-                // pour tous les carrés pour toutes les balles on regarde s'il y a une collision
-                for square in squares.iter_mut() {
+                // pour tous les ennemies et pour toutes les balles on regarde s'il y a une collision
+                for enemy in enemies.iter_mut() {
                     for bullet in bullets.iter_mut() {
-                        if bullet.collides_with(square) {
+                        if bullet.collides_with(enemy) {
                             bullet.collided = true;
-                            square.collided = true;
-                            score += square.size.round() as u32;
+                            enemy.collided = true;
+                            score += enemy.size.round() as u32;
                             high_score = high_score.max(score);
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: square.size.round() as u32 * 4,
+                                    amount: enemy.size.round() as u32 * 4,
                                     texture: Some(explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
-                                vec2(square.x, square.y),
+                                vec2(enemy.x, enemy.y),
                             ));
                             play_sound_once(&sound_explosion);
                         }
@@ -485,19 +482,19 @@ async fn main() {
                 }
 
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
-                squares.retain(|square| !square.collided); // on vire les carrés touché
+                enemies.retain(|enemy| !enemy.collided); // on vire les ennemies touchés
                 bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
-                // on dessine les carrés
-                display_squares(&squares, &enemy_small_sprite, &enemy_small_texture);
+                // on dessine les ennemies
+                display_enemies(&enemies, &enemy_small_sprite, &enemy_small_texture);
                 for (explosion, coords) in explosions.iter_mut() {
                     explosion.draw(*coords);
                 }
 
-                // test de collison entre les carrés et le cercle
+                // test de collison entre les enemies et le vaisseau
                 // affichage de game over si collison
-                if squares.iter().any(|square| circle.collides_with(square)) {
+                if enemies.iter().any(|enemy| ship.collides_with(enemy)) {
                     game_state = GameState::GameOver;
                 }
             }
@@ -513,14 +510,13 @@ async fn main() {
                     );
                     game_state = GameState::Playing;
                 }
-                display_squares(&squares, &enemy_small_sprite, &enemy_small_texture);
-                //draw_circle(circle.x, circle.y, circle.size, YELLOW);
+                display_enemies(&enemies, &enemy_small_sprite, &enemy_small_texture);
 
                 let ship_frame = ship_sprite.frame();
                 draw_texture_ex(
                     &ship_texture,
-                    circle.x - ship_frame.dest_size.x,
-                    circle.y - ship_frame.dest_size.y,
+                    ship.x - ship_frame.dest_size.x,
+                    ship.y - ship_frame.dest_size.y,
                     WHITE,
                     DrawTextureParams {
                         dest_size: Some(ship_frame.dest_size * 2.0),
