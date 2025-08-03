@@ -205,6 +205,49 @@ pub fn display_press_space() {
         WHITE,
     );
 }
+
+pub struct BulletsSet {
+    pub bullets: Vec<Shape>,
+}
+
+impl BulletsSet {
+    pub fn new() -> BulletsSet {
+        BulletsSet { bullets: vec![] }
+    }
+
+    pub fn clear(&mut self) {
+        self.bullets.clear();
+    }
+
+    pub fn push(&mut self, shape: Shape) {
+        self.bullets.push(shape);
+    }
+
+    pub fn display(&mut self, bullet_sprite: &AnimatedSprite, bullet_texture: &Texture2D) {
+        let bullet_frame = bullet_sprite.frame();
+        for bullet in &self.bullets {
+            draw_texture_ex(
+                bullet_texture,
+                bullet.x - bullet.size / 2.0,
+                bullet.y - bullet.size / 2.0,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(bullet.size, bullet.size)),
+                    source: Some(bullet_frame.source_rect),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    pub fn update(&mut self, delta_time: f32) {
+        for bullet in &mut self.bullets {
+            bullet.y -= bullet.speed * delta_time;
+        }
+    }
+
+}
+
 #[macroquad::main("Astéroïd")]
 async fn main() {
     const MOVEMENT_SPEED: f32 = 500.0;
@@ -220,7 +263,7 @@ async fn main() {
         collided: false,
     };
     let mut enemies: Vec<Shape> = vec![];
-    let mut bullets: Vec<Shape> = vec![];
+    let mut bullets: BulletsSet = BulletsSet::new();
 
     let font = load_ttf_font("./assets/test.ttf").await.unwrap();
 
@@ -422,8 +465,8 @@ async fn main() {
                 }
 
                 // on dessine les balles
-                display_bullets(&bullets, &bullet_sprite, &bullet_texture);
-
+                //display_bullets(&bullets, &bullet_sprite, &bullet_texture);
+                bullets.display(&bullet_sprite, &bullet_texture);
                 // on dessine le vaisseau
                 let ship_frame = ship_sprite.frame();
                 draw_texture_ex(
@@ -460,13 +503,11 @@ async fn main() {
                 enemies.retain(|enemy| enemy.y < screen_height() + enemy.size); // on vire les ennemie hors écran
 
                 // on déplace les balles
-                for bullet in &mut bullets {
-                    bullet.y -= bullet.speed * delta_time;
-                }
+                bullets.update(delta_time);
 
                 // pour tous les ennemies et pour toutes les balles on regarde s'il y a une collision
                 for enemy in enemies.iter_mut() {
-                    for bullet in bullets.iter_mut() {
+                    for bullet in bullets.bullets.iter_mut() {
                         if bullet.collides_with(enemy) {
                             bullet.collided = true;
                             enemy.collided = true;
@@ -485,9 +526,9 @@ async fn main() {
                     }
                 }
 
-                bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
+                bullets.bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
                 enemies.retain(|enemy| !enemy.collided); // on vire les ennemies touchés
-                bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
+                bullets.bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 // on dessine les ennemies
@@ -530,7 +571,7 @@ async fn main() {
                 );
 
                 display_score(&score, &high_score);
-                display_bullets(&bullets, &bullet_sprite, &bullet_texture);
+                bullets.display(&bullet_sprite, &bullet_texture);
                 display_paused();
                 display_game_name();
             }
