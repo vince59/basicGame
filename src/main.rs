@@ -215,7 +215,8 @@ async fn main() {
         .unwrap_or(0);
     let mut explosions: Vec<(Emitter, Vec2)> = vec![];
 
-    let texture = Texture2D::from_image(&Image::gen_image_color(1, 1, WHITE));
+    let img = Image::gen_image_color(1, 1, WHITE);
+    let texture = Texture2D::from_image(&img);
 
     let material = load_material(
         ShaderSource::Glsl {
@@ -223,17 +224,18 @@ async fn main() {
             fragment: FRAGMENT_SHADER,
         },
         MaterialParams {
-             uniforms: vec![UniformDesc::new("time", UniformType::Float1)],
+            uniforms: vec![UniformDesc::new("time", UniformType::Float1)],
             ..Default::default()
         },
     )
     .unwrap();
 
-
     loop {
         clear_background(BLACK);
-        material.set_uniform("time", get_time() as f32);
+
         gl_use_material(&material);
+        material.set_uniform("time", get_time() as f32);
+
         draw_texture_ex(
             &texture,
             0.0,
@@ -244,7 +246,7 @@ async fn main() {
                 ..Default::default()
             },
         );
-        //draw_rectangle(0.0, 0.0, screen_width(), screen_height(), WHITE);
+
         gl_use_default_material();
         match game_state {
             GameState::MainMenu => {
@@ -388,29 +390,24 @@ async fn main() {
     }
 }
 
-const FRAGMENT_SHADER: &'static str = r#" #version 100
-precision mediump float;
+const VERTEX_SHADER: &str = r#" #version 100
+attribute vec3 position; // position x,y du sommet donné par le rust
+varying vec2 uv; // coordonnée de la texture qui sera transmise au fragment
 
-varying vec2 uv;
-
-void main() {
-    if (uv.x > 0.4 && uv.x < 0.6 && uv.y > 0.4 && uv.y < 0.6) {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); // rouge
-    } else {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // noir
-    }
+void main() { // appelé pour chaque sommets donc 4 fois ici
+    vec2 pos = position.xy * 2.0 - 1.0; // Passe en -1..1 (clip space)
+    gl_Position = vec4(pos, 0.0, 1.0);
+    uv = position.xy;
 }
 "#;
 
-const VERTEX_SHADER: &'static str = r#" #version 100
-attribute vec3 position;
-attribute vec2 texcoord;
-
+const FRAGMENT_SHADER: &str = r#" #version 100
+precision mediump float;
 varying vec2 uv;
+uniform float time; // paramètre donné par le rust
 
 void main() {
-    vec2 pos = position.xy * 2.0 - 1.0; // Passe en -1..1 (clip space)
-    gl_Position = vec4(pos, 0.0, 1.0);
-    uv = position.xy; // <--- On force uv à être entre 0..1
+    float brightness = abs(sin(time));
+    gl_FragColor = vec4(brightness, brightness, brightness, 1.0);
 }
 "#;
