@@ -54,7 +54,7 @@ fn particle_explosion() -> particles::EmitterConfig {
         initial_direction_spread: 2.0 * std::f32::consts::PI,
         initial_velocity: 400.0,
         initial_velocity_randomness: 0.8,
-        size:16.0,
+        size: 16.0,
         size_randomness: 0.3,
         atlas: Some(AtlasConfig::new(5, 1, 0..)),
         ..Default::default()
@@ -126,14 +126,19 @@ pub fn display_score(score: &u32, high_score: &u32) {
     );
 }
 
-pub fn display_squares(squares: &Vec<Shape>) {
+pub fn display_squares(squares: &Vec<Shape>,enemy_small_sprite: &AnimatedSprite, enemy_small_texture: &Texture2D) {
+    let enemy_frame = enemy_small_sprite.frame();
     for square in squares {
-        draw_rectangle(
+        draw_texture_ex(
+            enemy_small_texture,
             square.x - square.size / 2.0,
             square.y - square.size / 2.0,
-            square.size,
-            square.size,
-            square.color,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(square.size, square.size)),
+                source: Some(enemy_frame.source_rect),
+                ..Default::default()
+            },
         );
     }
 }
@@ -228,7 +233,6 @@ async fn main() {
         .unwrap_or(0);
     let mut explosions: Vec<(Emitter, Vec2)> = vec![];
 
-
     set_pc_assets_folder("assets");
 
     let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
@@ -285,13 +289,31 @@ async fn main() {
         true,
     );
 
+    let mut enemy_small_sprite = AnimatedSprite::new(
+        17,
+        16,
+        &[Animation {
+            name: "enemy_small".to_string(),
+            row: 0,
+            frames: 2,
+            fps: 12,
+        }],
+        true,
+    );
+
     let explosion_texture: Texture2D = load_texture("explosion.png")
         .await
         .expect("Couldn't load file");
     explosion_texture.set_filter(FilterMode::Nearest);
+
+    let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
+        .await
+        .expect("Couldn't load file");
+    enemy_small_texture.set_filter(FilterMode::Nearest);
+
     build_textures_atlas();
 
- let img = Image::gen_image_color(1, 1, WHITE);
+    let img = Image::gen_image_color(1, 1, WHITE);
     let texture = Texture2D::from_image(&img);
 
     let material = load_material(
@@ -399,6 +421,7 @@ async fn main() {
 
                 ship_sprite.update();
                 bullet_sprite.update();
+                enemy_small_sprite.update();
 
                 // ajout des carrés : 5% de chance d'avoir un nouveau carré
                 if rand::gen_range(0, 99) >= 95 {
@@ -449,7 +472,7 @@ async fn main() {
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 // on dessine les carrés
-                display_squares(&squares);
+                display_squares(&squares,&enemy_small_sprite,&enemy_small_texture);
                 for (explosion, coords) in explosions.iter_mut() {
                     explosion.draw(*coords);
                 }
@@ -464,7 +487,7 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) {
                     game_state = GameState::Playing;
                 }
-                display_squares(&squares);
+                display_squares(&squares,&enemy_small_sprite,&enemy_small_texture);
                 //draw_circle(circle.x, circle.y, circle.size, YELLOW);
 
                 let ship_frame = ship_sprite.frame();
