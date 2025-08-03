@@ -149,27 +149,6 @@ pub fn display_enemies(
     }
 }
 
-pub fn display_bullets(
-    bullets: &Vec<Shape>,
-    bullet_sprite: &AnimatedSprite,
-    bullet_texture: &Texture2D,
-) {
-    let bullet_frame = bullet_sprite.frame();
-    for bullet in bullets {
-        draw_texture_ex(
-            bullet_texture,
-            bullet.x - bullet.size / 2.0,
-            bullet.y - bullet.size / 2.0,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(vec2(bullet.size, bullet.size)),
-                source: Some(bullet_frame.source_rect),
-                ..Default::default()
-            },
-        );
-    }
-}
-
 pub fn display_paused() {
     let text = "Paused";
     let text_dimensions = measure_text(text, None, 50, 1.0);
@@ -246,6 +225,17 @@ impl BulletsSet {
         }
     }
 
+    pub fn collides_with<F>(&mut self, shape: &mut Shape, f: &mut F)
+    where
+        F: FnMut(&mut Shape),
+    {
+        for bullet in self.bullets.iter_mut() {
+            if bullet.collides_with(&shape) {
+                bullet.collided = true;
+                f(shape); // Appelle la fonction f avec un argument mutable
+            }
+        }
+    }
 }
 
 #[macroquad::main("Astéroïd")]
@@ -465,7 +455,6 @@ async fn main() {
                 }
 
                 // on dessine les balles
-                //display_bullets(&bullets, &bullet_sprite, &bullet_texture);
                 bullets.display(&bullet_sprite, &bullet_texture);
                 // on dessine le vaisseau
                 let ship_frame = ship_sprite.frame();
@@ -506,27 +495,30 @@ async fn main() {
                 bullets.update(delta_time);
 
                 // pour tous les ennemies et pour toutes les balles on regarde s'il y a une collision
+
+                let mut hit = |enemy: &mut Shape| {
+                    enemy.collided = true;
+                    score += enemy.size.round() as u32;
+                    high_score = high_score.max(score);
+                    explosions.push((
+                        Emitter::new(EmitterConfig {
+                            amount: enemy.size.round() as u32 * 4,
+                            texture: Some(explosion_texture.clone()),
+                            ..particle_explosion()
+                        }),
+                        vec2(enemy.x, enemy.y),
+                    ));
+                    play_sound_once(&sound_explosion);
+                };
+
+                // Assurez-vous que `score`, `high_score`, et `explosions` sont mutables
                 for enemy in enemies.iter_mut() {
-                    for bullet in bullets.bullets.iter_mut() {
-                        if bullet.collides_with(enemy) {
-                            bullet.collided = true;
-                            enemy.collided = true;
-                            score += enemy.size.round() as u32;
-                            high_score = high_score.max(score);
-                            explosions.push((
-                                Emitter::new(EmitterConfig {
-                                    amount: enemy.size.round() as u32 * 4,
-                                    texture: Some(explosion_texture.clone()),
-                                    ..particle_explosion()
-                                }),
-                                vec2(enemy.x, enemy.y),
-                            ));
-                            play_sound_once(&sound_explosion);
-                        }
-                    }
+                    bullets.collides_with(enemy, &mut hit); // Passez la closure en tant que référence mutable
                 }
 
-                bullets.bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
+                bullets
+                    .bullets
+                    .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
                 enemies.retain(|enemy| !enemy.collided); // on vire les ennemies touchés
                 bullets.bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
