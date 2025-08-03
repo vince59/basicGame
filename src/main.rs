@@ -1,3 +1,7 @@
+mod bullet;
+
+use bullet::*;
+
 use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
@@ -339,7 +343,7 @@ async fn main() {
         },
     )
     .unwrap();
-
+    test();
     loop {
         clear_background(BLACK);
 
