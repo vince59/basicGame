@@ -427,7 +427,7 @@ void main() {
     float r = random(cell);
 
     if (r > 0.95) {
-        gl_FragColor = vec4(1.0, 0.2, 0.2, 1.0); // Pixel rouge clair
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // Pixel blanc
     } else {
         gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Fond noir
     }
