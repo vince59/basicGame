@@ -479,6 +479,7 @@ async fn main() {
                                 }),
                                 vec2(square.x, square.y),
                             ));
+                            play_sound_once(&sound_explosion);
                         }
                     }
                 }
