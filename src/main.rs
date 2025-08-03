@@ -1,7 +1,8 @@
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
-use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
+//use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
+use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
 
 //https://vince59.github.io/basicGame/
 
@@ -42,7 +43,7 @@ enum GameState {
     GameOver,
 }
 
-pub fn particle_explosion() -> particles::EmitterConfig {
+fn particle_explosion() -> particles::EmitterConfig {
     particles::EmitterConfig {
         local_coords: false,
         one_shot: true,
@@ -51,15 +52,11 @@ pub fn particle_explosion() -> particles::EmitterConfig {
         lifetime_randomness: 0.3,
         explosiveness: 0.65,
         initial_direction_spread: 2.0 * std::f32::consts::PI,
-        initial_velocity: 300.0,
+        initial_velocity: 400.0,
         initial_velocity_randomness: 0.8,
-        size: 3.0,
+        size:16.0,
         size_randomness: 0.3,
-        colors_curve: ColorCurve {
-            start: RED,
-            mid: ORANGE,
-            end: RED,
-        },
+        atlas: Some(AtlasConfig::new(5, 1, 0..)),
         ..Default::default()
     }
 }
@@ -141,7 +138,11 @@ pub fn display_squares(squares: &Vec<Shape>) {
     }
 }
 
-pub fn display_bullets(bullets: &Vec<Shape>, bullet_sprite: &AnimatedSprite, bullet_texture: &Texture2D) {
+pub fn display_bullets(
+    bullets: &Vec<Shape>,
+    bullet_sprite: &AnimatedSprite,
+    bullet_texture: &Texture2D,
+) {
     let bullet_frame = bullet_sprite.frame();
     for bullet in bullets {
         draw_texture_ex(
@@ -227,23 +228,6 @@ async fn main() {
         .unwrap_or(0);
     let mut explosions: Vec<(Emitter, Vec2)> = vec![];
 
-    let img = Image::gen_image_color(1, 1, WHITE);
-    let texture = Texture2D::from_image(&img);
-
-    let material = load_material(
-        ShaderSource::Glsl {
-            vertex: VERTEX_SHADER,
-            fragment: FRAGMENT_SHADER,
-        },
-        MaterialParams {
-            uniforms: vec![
-                UniformDesc::new("time", UniformType::Float1),
-                UniformDesc::new("screen_size", UniformType::Float2),
-            ],
-            ..Default::default()
-        },
-    )
-    .unwrap();
 
     set_pc_assets_folder("assets");
 
@@ -300,6 +284,30 @@ async fn main() {
         ],
         true,
     );
+
+    let explosion_texture: Texture2D = load_texture("explosion.png")
+        .await
+        .expect("Couldn't load file");
+    explosion_texture.set_filter(FilterMode::Nearest);
+    build_textures_atlas();
+
+ let img = Image::gen_image_color(1, 1, WHITE);
+    let texture = Texture2D::from_image(&img);
+
+    let material = load_material(
+        ShaderSource::Glsl {
+            vertex: VERTEX_SHADER,
+            fragment: FRAGMENT_SHADER,
+        },
+        MaterialParams {
+            uniforms: vec![
+                UniformDesc::new("time", UniformType::Float1),
+                UniformDesc::new("screen_size", UniformType::Float2),
+            ],
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     loop {
         clear_background(BLACK);
@@ -372,10 +380,23 @@ async fn main() {
                 }
 
                 // on dessine les balles
-                display_bullets(&bullets,&bullet_sprite,&bullet_texture);
+                display_bullets(&bullets, &bullet_sprite, &bullet_texture);
 
-                // on dessine le cercle
-                draw_circle(circle.x, circle.y, circle.size, YELLOW);
+                // on dessine le vaisseau
+
+                let ship_frame = ship_sprite.frame();
+                draw_texture_ex(
+                    &ship_texture,
+                    circle.x - ship_frame.dest_size.x,
+                    circle.y - ship_frame.dest_size.y,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(ship_frame.dest_size * 2.0),
+                        source: Some(ship_frame.source_rect),
+                        ..Default::default()
+                    },
+                );
+
                 ship_sprite.update();
                 bullet_sprite.update();
 
@@ -412,7 +433,8 @@ async fn main() {
                             high_score = high_score.max(score);
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: square.size.round() as u32 * 2,
+                                    amount: square.size.round() as u32 * 4,
+                                    texture: Some(explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
                                 vec2(square.x, square.y),
@@ -443,9 +465,23 @@ async fn main() {
                     game_state = GameState::Playing;
                 }
                 display_squares(&squares);
-                draw_circle(circle.x, circle.y, circle.size, YELLOW);
+                //draw_circle(circle.x, circle.y, circle.size, YELLOW);
+
+                let ship_frame = ship_sprite.frame();
+                draw_texture_ex(
+                    &ship_texture,
+                    circle.x - ship_frame.dest_size.x,
+                    circle.y - ship_frame.dest_size.y,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(ship_frame.dest_size * 2.0),
+                        source: Some(ship_frame.source_rect),
+                        ..Default::default()
+                    },
+                );
+
                 display_score(&score, &high_score);
-                display_bullets(&bullets,&bullet_sprite,&bullet_texture);
+                display_bullets(&bullets, &bullet_sprite, &bullet_texture);
                 display_paused();
                 display_game_name();
             }
