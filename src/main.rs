@@ -1,3 +1,4 @@
+use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
@@ -140,9 +141,20 @@ pub fn display_squares(squares: &Vec<Shape>) {
     }
 }
 
-pub fn display_bullets(bullets: &Vec<Shape>) {
+pub fn display_bullets(bullets: &Vec<Shape>, bullet_sprite: &AnimatedSprite, bullet_texture: &Texture2D) {
+    let bullet_frame = bullet_sprite.frame();
     for bullet in bullets {
-        draw_circle(bullet.x, bullet.y, bullet.size, bullet.color);
+        draw_texture_ex(
+            bullet_texture,
+            bullet.x - bullet.size / 2.0,
+            bullet.y - bullet.size / 2.0,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(bullet.size, bullet.size)),
+                source: Some(bullet_frame.source_rect),
+                ..Default::default()
+            },
+        );
     }
 }
 
@@ -224,12 +236,70 @@ async fn main() {
             fragment: FRAGMENT_SHADER,
         },
         MaterialParams {
-            uniforms: vec![UniformDesc::new("time", UniformType::Float1),
-            UniformDesc::new("screen_size", UniformType::Float2)],
+            uniforms: vec![
+                UniformDesc::new("time", UniformType::Float1),
+                UniformDesc::new("screen_size", UniformType::Float2),
+            ],
             ..Default::default()
         },
     )
     .unwrap();
+
+    set_pc_assets_folder("assets");
+
+    let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
+    ship_texture.set_filter(FilterMode::Nearest);
+    let bullet_texture: Texture2D = load_texture("laser-bolts.png")
+        .await
+        .expect("Couldn't load file");
+    bullet_texture.set_filter(FilterMode::Nearest);
+
+    let mut bullet_sprite = AnimatedSprite::new(
+        16,
+        16,
+        &[
+            Animation {
+                name: "bullet".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "bolt".to_string(),
+                row: 1,
+                frames: 2,
+                fps: 12,
+            },
+        ],
+        true,
+    );
+    bullet_sprite.set_animation(1);
+
+    let mut ship_sprite = AnimatedSprite::new(
+        16,
+        24,
+        &[
+            Animation {
+                name: "idle".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "left".to_string(),
+                row: 2,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "right".to_string(),
+                row: 4,
+                frames: 2,
+                fps: 12,
+            },
+        ],
+        true,
+    );
 
     loop {
         clear_background(BLACK);
@@ -269,11 +339,14 @@ async fn main() {
                 let delta_time = get_frame_time(); // temps passé depuis la dernière frame
                 display_score(&score, &high_score);
                 // dessin du cercle
+                ship_sprite.set_animation(0);
                 if is_key_down(KeyCode::Right) {
                     circle.x += circle.speed * delta_time;
+                    ship_sprite.set_animation(2);
                 }
                 if is_key_down(KeyCode::Left) {
                     circle.x -= circle.speed * delta_time;
+                    ship_sprite.set_animation(1);
                 }
                 if is_key_down(KeyCode::Down) {
                     circle.y += circle.speed * delta_time;
@@ -287,9 +360,9 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) {
                     bullets.push(Shape {
                         x: circle.x,
-                        y: circle.y,
+                        y: circle.y - 24.0,
                         speed: circle.speed * 2.0,
-                        size: 5.0,
+                        size: 32.0,
                         collided: false,
                         color: RED,
                     });
@@ -299,10 +372,12 @@ async fn main() {
                 }
 
                 // on dessine les balles
-                display_bullets(&bullets);
+                display_bullets(&bullets,&bullet_sprite,&bullet_texture);
 
                 // on dessine le cercle
                 draw_circle(circle.x, circle.y, circle.size, YELLOW);
+                ship_sprite.update();
+                bullet_sprite.update();
 
                 // ajout des carrés : 5% de chance d'avoir un nouveau carré
                 if rand::gen_range(0, 99) >= 95 {
@@ -370,7 +445,7 @@ async fn main() {
                 display_squares(&squares);
                 draw_circle(circle.x, circle.y, circle.size, YELLOW);
                 display_score(&score, &high_score);
-                display_bullets(&bullets);
+                display_bullets(&bullets,&bullet_sprite,&bullet_texture);
                 display_paused();
                 display_game_name();
             }
