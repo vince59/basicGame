@@ -1,4 +1,4 @@
-use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once};
+use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
@@ -502,7 +502,15 @@ async fn main() {
                 }
             }
             GameState::Paused => {
+                stop_sound(&theme_music);
                 if is_key_pressed(KeyCode::Space) {
+                    play_sound(
+                        &theme_music,
+                        PlaySoundParams {
+                            looped: true,
+                            volume: 1.,
+                        },
+                    );
                     game_state = GameState::Playing;
                 }
                 display_squares(&squares, &enemy_small_sprite, &enemy_small_texture);
