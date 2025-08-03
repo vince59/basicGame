@@ -2,7 +2,9 @@ mod bullet;
 
 use bullet::*;
 
-use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
+use macroquad::audio::{
+    PlaySoundParams, Sound, load_sound, play_sound, play_sound_once, stop_sound,
+};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
@@ -187,21 +189,36 @@ pub fn display_press_space() {
 
 pub struct BulletsSet {
     pub bullets: Vec<Shape>,
+    pub explosions: Vec<(Emitter, Vec2)>,
+    pub explosion_texture: Texture2D,
+    pub sound_explosion: Sound,
 }
 
 impl BulletsSet {
-    pub fn new() -> BulletsSet {
-        BulletsSet { bullets: vec![] }
+    pub async fn new() -> BulletsSet {
+        let explosion_texture: Texture2D = load_texture("explosion.png")
+            .await
+            .expect("Couldn't load file");
+        explosion_texture.set_filter(FilterMode::Nearest);
+        let sound_explosion = load_sound("explosion.wav").await.unwrap();
+        BulletsSet {
+            bullets: vec![],
+            explosions: vec![],
+            explosion_texture,
+            sound_explosion,
+        }
     }
 
     pub fn clear(&mut self) {
         self.bullets.clear();
+        self.explosions.clear();
     }
 
     pub fn push(&mut self, shape: Shape) {
         self.bullets.push(shape);
     }
 
+    // affichage des balles et des explosions
     pub fn display(&mut self, bullet_sprite: &AnimatedSprite, bullet_texture: &Texture2D) {
         let bullet_frame = bullet_sprite.frame();
         for bullet in &self.bullets {
@@ -217,14 +234,27 @@ impl BulletsSet {
                 },
             );
         }
+        // dessin des explosions
+        for (explosion, coords) in self.explosions.iter_mut() {
+            explosion.draw(*coords);
+        }
     }
 
+    // mise à jour de la positions des balles
     pub fn update(&mut self, delta_time: f32) {
         for bullet in &mut self.bullets {
             bullet.y -= bullet.speed * delta_time;
         }
     }
 
+    // suppression des balles et des explosions
+    pub fn retain(&mut self) {
+        self.bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
+        self.explosions
+            .retain(|(explosion, _)| explosion.config.emitting);
+    }
+
+    // test si une des balles a touché quelque chose
     pub fn collides_with<F>(&mut self, shape: &mut Shape, f: &mut F)
     where
         F: FnMut(&mut Shape),
@@ -232,7 +262,17 @@ impl BulletsSet {
         for bullet in self.bullets.iter_mut() {
             if bullet.collides_with(&shape) {
                 bullet.collided = true;
-                f(shape); // Appelle la fonction f avec un argument mutable
+                // Ajout d'une explosion
+                self.explosions.push((
+                    Emitter::new(EmitterConfig {
+                        amount: shape.size.round() as u32 * 4,
+                        texture: Some(self.explosion_texture.clone()),
+                        ..particle_explosion()
+                    }),
+                    vec2(shape.x, shape.y),
+                ));
+                play_sound_once(&self.sound_explosion); // le son de l'explosion
+                f(shape); // Appelle la callback 
             }
         }
     }
@@ -240,6 +280,7 @@ impl BulletsSet {
 
 #[macroquad::main("Astéroïd")]
 async fn main() {
+    set_pc_assets_folder("assets");
     const MOVEMENT_SPEED: f32 = 500.0;
     rand::srand(miniquad::date::now() as u64);
 
@@ -253,9 +294,9 @@ async fn main() {
         collided: false,
     };
     let mut enemies: Vec<Shape> = vec![];
-    let mut bullets: BulletsSet = BulletsSet::new();
+    let mut bullets: BulletsSet = BulletsSet::new().await;
 
-    let font = load_ttf_font("./assets/test.ttf").await.unwrap();
+    let font = load_ttf_font("test.ttf").await.unwrap();
 
     let mut score: u32 = 0;
     let storage = &mut quad_storage::STORAGE.lock().unwrap();
@@ -263,9 +304,7 @@ async fn main() {
         .get("highscore")
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(0);
-    let mut explosions: Vec<(Emitter, Vec2)> = vec![];
-
-    set_pc_assets_folder("assets");
+    //let mut explosions: Vec<(Emitter, Vec2)> = vec![];
 
     let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
     ship_texture.set_filter(FilterMode::Nearest);
@@ -333,10 +372,10 @@ async fn main() {
         true,
     );
 
-    let explosion_texture: Texture2D = load_texture("explosion.png")
+    /*let explosion_texture: Texture2D = load_texture("explosion.png")
         .await
         .expect("Couldn't load file");
-    explosion_texture.set_filter(FilterMode::Nearest);
+    explosion_texture.set_filter(FilterMode::Nearest);*/
 
     let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
         .await
@@ -356,7 +395,6 @@ async fn main() {
     build_textures_atlas();
 
     let theme_music = load_sound("8bit-spaceshooter.ogg").await.unwrap();
-    let sound_explosion = load_sound("explosion.wav").await.unwrap();
     let sound_laser = load_sound("laser.wav").await.unwrap();
 
     let img = Image::gen_image_color(1, 1, WHITE);
@@ -414,7 +452,7 @@ async fn main() {
                         },
                     );
                     game_state = GameState::Playing;
-                    explosions.clear();
+                    //explosions.clear();
                 }
                 display_press_space();
             }
@@ -494,40 +532,27 @@ async fn main() {
                 // on déplace les balles
                 bullets.update(delta_time);
 
-                // pour tous les ennemies et pour toutes les balles on regarde s'il y a une collision
+                // si il y a une collison entre une balle et un ennemie
 
                 let mut hit = |enemy: &mut Shape| {
                     enemy.collided = true;
                     score += enemy.size.round() as u32;
                     high_score = high_score.max(score);
-                    explosions.push((
-                        Emitter::new(EmitterConfig {
-                            amount: enemy.size.round() as u32 * 4,
-                            texture: Some(explosion_texture.clone()),
-                            ..particle_explosion()
-                        }),
-                        vec2(enemy.x, enemy.y),
-                    ));
-                    play_sound_once(&sound_explosion);
                 };
 
-                // Assurez-vous que `score`, `high_score`, et `explosions` sont mutables
+                // pour tous les ennemies et pour toutes les balles on regarde s'il y a une collision
                 for enemy in enemies.iter_mut() {
-                    bullets.collides_with(enemy, &mut hit); // Passez la closure en tant que référence mutable
+                    bullets.collides_with(enemy, &mut hit);
                 }
 
                 bullets
                     .bullets
                     .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
                 enemies.retain(|enemy| !enemy.collided); // on vire les ennemies touchés
-                bullets.bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
-                explosions.retain(|(explosion, _)| explosion.config.emitting);
+                bullets.retain(); // on vire les balles touchées
 
                 // on dessine les ennemies
                 display_enemies(&enemies, &enemy_small_sprite, &enemy_small_texture);
-                for (explosion, coords) in explosions.iter_mut() {
-                    explosion.draw(*coords);
-                }
 
                 // test de collison entre les enemies et le vaisseau
                 // affichage de game over si collison
