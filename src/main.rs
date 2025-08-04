@@ -55,8 +55,19 @@ enum GameState {
     GameOver,
 }
 
-#[macroquad::main("Astéroïd")]
+fn window_conf() -> Conf {
+    Conf {
+        window_width: 1000,   // Largeur de la fenêtre
+        window_height: 600,  // Hauteur de la fenêtre
+        window_title: "Asteroïd".to_owned(),
+        fullscreen: false,   // Si tu veux que la fenêtre soit en plein écran ou non
+        ..Conf::default() 
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
+    println!("{} {}",screen_width(), screen_height());
     set_pc_assets_folder("assets");
     rand::srand(miniquad::date::now() as u64);
 
