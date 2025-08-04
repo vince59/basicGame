@@ -1,15 +1,14 @@
 mod bullet;
-mod enemy;
+mod enemies;
 mod ship;
 mod text_display;
 
 use bullet::*;
-use enemy::*;
+use enemies::*;
 use ship::*;
 use text_display::*;
 
-use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
-use macroquad::experimental::animation::{AnimatedSprite, Animation};
+use macroquad::audio::{PlaySoundParams, load_sound, play_sound, stop_sound};
 use macroquad::prelude::*;
 
 //https://vince59.github.io/basicGame/
