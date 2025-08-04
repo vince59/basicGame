@@ -1,14 +1,17 @@
 mod bullet;
 mod enemies;
+mod shader;
 mod ship;
 mod text_display;
+mod music;
 
 use bullet::*;
 use enemies::*;
+use shader::*;
 use ship::*;
 use text_display::*;
+use music::*;
 
-use macroquad::audio::{PlaySoundParams, load_sound, play_sound, stop_sound};
 use macroquad::prelude::*;
 
 //https://vince59.github.io/basicGame/
@@ -66,46 +69,13 @@ async fn main() {
         .get("highscore")
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(0);
-
     build_textures_atlas();
 
-    let theme_music = load_sound("8bit-spaceshooter.ogg").await.unwrap();
-
-    let img = Image::gen_image_color(1, 1, WHITE);
-    let texture = Texture2D::from_image(&img);
-
-    let material = load_material(
-        ShaderSource::Glsl {
-            vertex: VERTEX_SHADER,
-            fragment: FRAGMENT_SHADER,
-        },
-        MaterialParams {
-            uniforms: vec![
-                UniformDesc::new("time", UniformType::Float1),
-                UniformDesc::new("screen_size", UniformType::Float2),
-            ],
-            ..Default::default()
-        },
-    )
-    .unwrap();
+    let mut starfield = Shader::new();
+    let mut theme_music = Music::new().await;
     loop {
         clear_background(BLACK);
-
-        gl_use_material(&material);
-        material.set_uniform("time", get_time() as f32);
-        material.set_uniform("screen_size", vec2(screen_width(), screen_height()));
-        draw_texture_ex(
-            &texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(vec2(screen_width(), screen_height())),
-                ..Default::default()
-            },
-        );
-
-        gl_use_default_material();
+        starfield.display();
         match game_state {
             GameState::MainMenu => {
                 if is_key_pressed(KeyCode::Escape) {
@@ -116,24 +86,17 @@ async fn main() {
                     bullets.clear();
                     ship.reset();
                     score = 0;
-                    stop_sound(&theme_music);
-                    play_sound(
-                        &theme_music,
-                        PlaySoundParams {
-                            looped: true,
-                            volume: 1.,
-                        },
-                    );
+                    theme_music.reset();
                     game_state = GameState::Playing;
                 }
                 display_press_space();
             }
             GameState::Playing => {
                 let delta_time = get_frame_time(); // temps passé depuis la dernière frame
-                
+
                 // mise à jour des composants du jeux
                 ship.update(delta_time);
-                bullets.update(delta_time); 
+                bullets.update(delta_time);
                 enemies.update(delta_time);
 
                 // affichages
@@ -147,7 +110,7 @@ async fn main() {
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
-                
+
                 // si il y a une collison entre une balle et un ennemi
                 let mut hit_enemy_bullet = |enemy: &mut Shape| {
                     enemy.collided = true;
@@ -157,7 +120,7 @@ async fn main() {
 
                 // s'il y a une collision entre un ennemi et le vaisseau
                 let mut hit_ship_enemy = |ship: &mut Shape| {
-                    ship.collided=true;
+                    ship.collided = true;
                     game_state = GameState::GameOver;
                 };
 
@@ -166,18 +129,11 @@ async fn main() {
                     bullets.collides_with(enemy, &mut hit_enemy_bullet); // collision avec une balle
                 }
                 enemies.collides_with(ship.get_shape(), &mut hit_ship_enemy); // collision avec le vaisseau
-
             }
             GameState::Paused => {
-                stop_sound(&theme_music);
+                theme_music.stop();
                 if is_key_pressed(KeyCode::Space) {
-                    play_sound(
-                        &theme_music,
-                        PlaySoundParams {
-                            looped: true,
-                            volume: 1.,
-                        },
-                    );
+                    theme_music.play();
                     game_state = GameState::Playing;
                 }
                 enemies.display();
@@ -204,46 +160,3 @@ async fn main() {
         next_frame().await
     }
 }
-
-const VERTEX_SHADER: &str = r#" #version 100
-attribute vec3 position;
-attribute vec2 texcoord;
-
-uniform vec2 screen_size;
-varying vec2 uv;
-
-void main() {
-    uv = texcoord;
-
-    // Convertit la position (en pixels) en clip-space [-1, 1]
-    vec2 clip_pos = (position.xy / screen_size) * 2.0 - 1.0;
-    clip_pos.y = -clip_pos.y; // Inversion verticale pour OpenGL
-
-    gl_Position = vec4(clip_pos, 0.0, 1.0);
-}
-"#;
-
-const FRAGMENT_SHADER: &str = r#" #version 100
-precision mediump float;
-
-varying vec2 uv;
-uniform float time;
-
-// Fonction pseudo-aléatoire
-float random(vec2 st) {
-    return fract(sin(dot(st, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-void main() {
-    // Crée une grille virtuelle 100x100
-    vec2 cell = floor(uv * 200.0);
-
-    float r = random(cell);
-
-    if (r > 0.99) {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // Pixel blanc
-    } else {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Fond noir
-    }
-}
-"#;

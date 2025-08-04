@@ -5,8 +5,6 @@ use macroquad::audio::{Sound, load_sound, play_sound_once};
 use macroquad::experimental::animation::AnimatedSprite;
 use macroquad::experimental::animation::Animation;
 use macroquad::prelude::*;
-use macroquad_particles::{self as particles, AtlasConfig};
-use macroquad_particles::{Emitter, EmitterConfig};
 
 const MOVEMENT_SPEED: f32 = 500.0;
 
