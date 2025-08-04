@@ -1,4 +1,4 @@
-mod bullet;
+mod bullets;
 mod enemies;
 mod shader;
 mod ship;
@@ -6,7 +6,7 @@ mod text_display;
 mod music;
 mod score;
 
-use bullet::*;
+use bullets::*;
 use enemies::*;
 use shader::*;
 use ship::*;
