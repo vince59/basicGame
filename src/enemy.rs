@@ -1,29 +1,60 @@
 /* Structure EnnemiesSet (gestion des ennemis) */
 
 use crate::Shape;
-use macroquad::experimental::animation::AnimatedSprite;
 use macroquad::prelude::*;
+use macroquad::experimental::animation::{AnimatedSprite, Animation};
 
 pub struct EnemiesSet {
     pub enemies: Vec<Shape>,
+    enemy_small_sprite: AnimatedSprite,
+    enemy_small_texture: Texture2D,
+    enemy_medium_texture: Texture2D,
+    enemy_big_texture: Texture2D,
 }
 
 impl EnemiesSet {
-    pub fn new() -> EnemiesSet {
+    pub async fn new() -> EnemiesSet {
+        let mut enemy_small_sprite = AnimatedSprite::new(
+            17,
+            16,
+            &[Animation {
+                name: "enemy_small".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            }],
+            true,
+        );
+
+        let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
+            .await
+            .expect("Couldn't load file");
+        enemy_small_texture.set_filter(FilterMode::Nearest);
+
+        let enemy_medium_texture: Texture2D = load_texture("enemy-medium.png")
+            .await
+            .expect("Couldn't load file");
+        enemy_medium_texture.set_filter(FilterMode::Nearest);
+
+        let enemy_big_texture: Texture2D = load_texture("enemy-big.png")
+            .await
+            .expect("Couldn't load file");
+        enemy_big_texture.set_filter(FilterMode::Nearest);
+
         EnemiesSet {
             enemies: vec![],
+            enemy_small_sprite,
+            enemy_small_texture,
+            enemy_medium_texture,
+            enemy_big_texture,
         }
     }
 
-    pub fn display(
-        &self,
-        enemy_small_sprite: &AnimatedSprite,
-        enemy_small_texture: &Texture2D,
-    ) {
-        let enemy_frame = enemy_small_sprite.frame();
+    pub fn display(&self) {
+        let enemy_frame = self.enemy_small_sprite.frame();
         for enemy in &self.enemies {
             draw_texture_ex(
-                enemy_small_texture,
+                &self.enemy_small_texture,
                 enemy.x - enemy.size / 2.0,
                 enemy.y - enemy.size / 2.0,
                 WHITE,
@@ -58,12 +89,13 @@ impl EnemiesSet {
         for enemy in &mut self.enemies {
             enemy.y += enemy.speed * delta_time;
         }
-        self.enemies.retain(|enemy| enemy.y < screen_height() + enemy.size); // on vire les ennemis hors écran
+        self.enemies
+            .retain(|enemy| enemy.y < screen_height() + enemy.size); // on vire les ennemis hors écran
         self.enemies.retain(|enemy| !enemy.collided); // on vire les ennemies touchés
+        self.enemy_small_sprite.update();
     }
 
-    pub fn get_list(&mut self) -> &mut Vec<Shape>{
+    pub fn get_list(&mut self) -> &mut Vec<Shape> {
         &mut self.enemies
     }
-
 }

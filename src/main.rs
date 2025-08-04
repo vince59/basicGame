@@ -63,7 +63,7 @@ async fn main() {
     };
 
     let mut bullets: BulletsSet = BulletsSet::new().await;
-    let mut enemies: EnemiesSet = EnemiesSet::new();
+    let mut enemies: EnemiesSet = EnemiesSet::new().await;
 
     let font = load_ttf_font("test.ttf").await.unwrap();
 
@@ -102,33 +102,6 @@ async fn main() {
         ],
         true,
     );
-
-    let mut enemy_small_sprite = AnimatedSprite::new(
-        17,
-        16,
-        &[Animation {
-            name: "enemy_small".to_string(),
-            row: 0,
-            frames: 2,
-            fps: 12,
-        }],
-        true,
-    );
-
-    let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
-        .await
-        .expect("Couldn't load file");
-    enemy_small_texture.set_filter(FilterMode::Nearest);
-
-    let enemy_medium_texture: Texture2D = load_texture("enemy-medium.png")
-        .await
-        .expect("Couldn't load file");
-    enemy_medium_texture.set_filter(FilterMode::Nearest);
-
-    let enemy_big_texture: Texture2D = load_texture("enemy-big.png")
-        .await
-        .expect("Couldn't load file");
-    enemy_big_texture.set_filter(FilterMode::Nearest);
 
     build_textures_atlas();
 
@@ -228,7 +201,7 @@ async fn main() {
                     game_state = GameState::Paused;
                 }
 
-                enemies.display(&enemy_small_sprite, &enemy_small_texture);
+                enemies.display();
                 // on dessine les balles
                 bullets.display();
                 // on dessine le vaisseau
@@ -251,7 +224,7 @@ async fn main() {
                 );
 
                 ship_sprite.update();
-                enemy_small_sprite.update();
+                
                 bullets.update(delta_time); // on déplace les balles
                 enemies.update(delta_time);
                 // si il y a une collison entre une balle et un ennemi
@@ -281,7 +254,7 @@ async fn main() {
                     );
                     game_state = GameState::Playing;
                 }
-                enemies.display(&enemy_small_sprite, &enemy_small_texture);
+                enemies.display();
 
                 let ship_frame = ship_sprite.frame();
                 draw_texture_ex(
