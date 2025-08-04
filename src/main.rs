@@ -4,6 +4,7 @@ mod shader;
 mod ship;
 mod text_display;
 mod music;
+mod score;
 
 use bullet::*;
 use enemies::*;
@@ -11,6 +12,7 @@ use shader::*;
 use ship::*;
 use text_display::*;
 use music::*;
+use score::*;
 
 use macroquad::prelude::*;
 
@@ -57,20 +59,12 @@ async fn main() {
     rand::srand(miniquad::date::now() as u64);
 
     let mut game_state = GameState::MainMenu;
-    let mut bullets: BulletsSet = BulletsSet::new().await;
-    let mut enemies: EnemiesSet = EnemiesSet::new().await;
-    let mut ship: Ship = Ship::new().await;
-
-    let font = load_ttf_font("test.ttf").await.unwrap();
-
-    let mut score: u32 = 0;
-    let storage = &mut quad_storage::STORAGE.lock().unwrap();
-    let mut high_score: u32 = storage
-        .get("highscore")
-        .and_then(|s| s.parse::<u32>().ok())
-        .unwrap_or(0);
+    let mut bullets = BulletsSet::new().await;
+    let mut enemies = EnemiesSet::new().await;
+    let mut ship= Ship::new().await;
+    let mut score = Score::new();
     build_textures_atlas();
-
+    let font = load_ttf_font("test.ttf").await.unwrap();
     let mut starfield = Shader::new();
     let mut theme_music = Music::new().await;
     loop {
@@ -85,7 +79,7 @@ async fn main() {
                     enemies.clear();
                     bullets.clear();
                     ship.reset();
-                    score = 0;
+                    score.reset();
                     theme_music.reset();
                     game_state = GameState::Playing;
                 }
@@ -93,7 +87,6 @@ async fn main() {
             }
             GameState::Playing => {
                 let delta_time = get_frame_time(); // temps passé depuis la dernière frame
-
                 // mise à jour des composants du jeux
                 ship.update(delta_time);
                 bullets.update(delta_time);
@@ -102,7 +95,7 @@ async fn main() {
                 // affichages
                 enemies.display();
                 bullets.display();
-                display_score(&score, &high_score);
+                score.display();
 
                 if is_key_pressed(KeyCode::Space) {
                     bullets.push(ship.shoot());
@@ -114,8 +107,7 @@ async fn main() {
                 // si il y a une collison entre une balle et un ennemi
                 let mut hit_enemy_bullet = |enemy: &mut Shape| {
                     enemy.collided = true;
-                    score += enemy.size.round() as u32;
-                    high_score = high_score.max(score);
+                    score.increase(enemy.size.round() as u32);
                 };
 
                 // s'il y a une collision entre un ennemi et le vaisseau
@@ -139,8 +131,7 @@ async fn main() {
                 enemies.display();
                 ship.display();
                 bullets.display();
-
-                display_score(&score, &high_score);
+                score.display();
                 display_paused();
                 display_game_name();
             }
@@ -150,11 +141,7 @@ async fn main() {
                     game_state = GameState::MainMenu;
                 }
                 display_game_over(&font);
-                if score == high_score {
-                    let s = high_score.to_string();
-                    storage.set("highscore", &s);
-                    display_congratulations(&font);
-                }
+                score.display_high_score(&font);
             }
         }
         next_frame().await
