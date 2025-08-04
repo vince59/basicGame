@@ -98,4 +98,16 @@ impl EnemiesSet {
     pub fn get_list(&mut self) -> &mut Vec<Shape> {
         &mut self.enemies
     }
+
+    pub fn collides_with<F>(&mut self, shape: &mut Shape, f: &mut F)
+    where
+        F: FnMut(&mut Shape),
+    {
+        for enemy in self.enemies.iter_mut() {
+            if enemy.collides_with(&shape) {
+                enemy.collided = true;
+                f(shape); // Appelle la callback pour faire d'autres choses en cas de collision
+            }
+        }
+    }
 }

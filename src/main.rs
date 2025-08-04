@@ -1,11 +1,14 @@
 mod bullet;
-mod text_display;
 mod enemy;
+mod ship;
+mod text_display;
 
 use bullet::*;
-use text_display::*;
 use enemy::*;
-use macroquad::audio::{ PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
+use ship::*;
+use text_display::*;
+
+use macroquad::audio::{PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 
@@ -49,21 +52,12 @@ enum GameState {
 #[macroquad::main("Astéroïd")]
 async fn main() {
     set_pc_assets_folder("assets");
-    const MOVEMENT_SPEED: f32 = 500.0;
     rand::srand(miniquad::date::now() as u64);
 
     let mut game_state = GameState::MainMenu;
-
-    let mut ship = Shape {
-        size: 16.0,
-        speed: MOVEMENT_SPEED,
-        x: screen_width() / 2.0,
-        y: screen_height() / 2.0,
-        collided: false,
-    };
-
     let mut bullets: BulletsSet = BulletsSet::new().await;
     let mut enemies: EnemiesSet = EnemiesSet::new().await;
+    let mut ship: Ship = Ship::new().await;
 
     let font = load_ttf_font("test.ttf").await.unwrap();
 
@@ -74,39 +68,9 @@ async fn main() {
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(0);
 
-    let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
-    ship_texture.set_filter(FilterMode::Nearest);
-
-    let mut ship_sprite = AnimatedSprite::new(
-        16,
-        24,
-        &[
-            Animation {
-                name: "idle".to_string(),
-                row: 0,
-                frames: 2,
-                fps: 12,
-            },
-            Animation {
-                name: "left".to_string(),
-                row: 2,
-                frames: 2,
-                fps: 12,
-            },
-            Animation {
-                name: "right".to_string(),
-                row: 4,
-                frames: 2,
-                fps: 12,
-            },
-        ],
-        true,
-    );
-
     build_textures_atlas();
 
     let theme_music = load_sound("8bit-spaceshooter.ogg").await.unwrap();
-    let sound_laser = load_sound("laser.wav").await.unwrap();
 
     let img = Image::gen_image_color(1, 1, WHITE);
     let texture = Texture2D::from_image(&img);
@@ -151,9 +115,9 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) {
                     enemies.clear();
                     bullets.clear();
-                    ship.x = screen_width() / 2.0;
-                    ship.y = screen_height() / 2.0;
+                    ship.reset();
                     score = 0;
+                    stop_sound(&theme_music);
                     play_sound(
                         &theme_music,
                         PlaySoundParams {
@@ -167,80 +131,43 @@ async fn main() {
             }
             GameState::Playing => {
                 let delta_time = get_frame_time(); // temps passé depuis la dernière frame
+                
+                // mise à jour des composants du jeux
+                ship.update(delta_time);
+                bullets.update(delta_time); 
+                enemies.update(delta_time);
+
+                // affichages
+                enemies.display();
+                bullets.display();
                 display_score(&score, &high_score);
-                // dessin du vaisseau
-                ship_sprite.set_animation(0);
-                if is_key_down(KeyCode::Right) {
-                    ship.x += ship.speed * delta_time;
-                    ship_sprite.set_animation(2);
-                }
-                if is_key_down(KeyCode::Left) {
-                    ship.x -= ship.speed * delta_time;
-                    ship_sprite.set_animation(1);
-                }
-                if is_key_down(KeyCode::Down) {
-                    ship.y += ship.speed * delta_time;
-                }
-                if is_key_down(KeyCode::Up) {
-                    ship.y -= ship.speed * delta_time;
-                }
-                // on s'assure qu'on ne déborde pas de l'écran
-                ship.x = clamp(ship.x, ship.size, screen_width() - ship.size);
-                ship.y = clamp(ship.y, ship.size, screen_height() - ship.size);
+
                 if is_key_pressed(KeyCode::Space) {
-                    bullets.push(Shape {
-                        x: ship.x,
-                        y: ship.y - 24.0,
-                        speed: ship.speed * 2.0,
-                        size: 32.0,
-                        collided: false,
-                    });
-                    play_sound_once(&sound_laser);
+                    bullets.push(ship.shoot());
                 }
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
-
-                enemies.display();
-                // on dessine les balles
-                bullets.display();
-                // on dessine le vaisseau
-                // test de collison entre les enemies et le vaisseau
-                // affichage de game over si collison
-                if enemies.get_list().iter().any(|enemy| ship.collides_with(enemy)) {
-                    game_state = GameState::GameOver;
-                }
-                let ship_frame = ship_sprite.frame();
-                draw_texture_ex(
-                    &ship_texture,
-                    ship.x - ship_frame.dest_size.x,
-                    ship.y - ship_frame.dest_size.y,
-                    WHITE,
-                    DrawTextureParams {
-                        dest_size: Some(ship_frame.dest_size * 2.0),
-                        source: Some(ship_frame.source_rect),
-                        ..Default::default()
-                    },
-                );
-
-                ship_sprite.update();
                 
-                bullets.update(delta_time); // on déplace les balles
-                enemies.update(delta_time);
                 // si il y a une collison entre une balle et un ennemi
-
-                let mut hit = |enemy: &mut Shape| {
+                let mut hit_enemy_bullet = |enemy: &mut Shape| {
                     enemy.collided = true;
                     score += enemy.size.round() as u32;
                     high_score = high_score.max(score);
                 };
 
-                // pour tous les ennemis et pour toutes les balles on regarde s'il y a une collision
-                for enemy in enemies.get_list() {
-                    bullets.collides_with(enemy, &mut hit);
-                }
+                // s'il y a une collision entre un ennemi et le vaisseau
+                let mut hit_ship_enemy = |ship: &mut Shape| {
+                    ship.collided=true;
+                    game_state = GameState::GameOver;
+                };
 
-                
+                // Vérification des collisions
+                for enemy in enemies.get_list() {
+                    bullets.collides_with(enemy, &mut hit_enemy_bullet); // collision avec une balle
+                }
+                enemies.collides_with(ship.get_shape(), &mut hit_ship_enemy); // collision avec le vaisseau
+
             }
             GameState::Paused => {
                 stop_sound(&theme_music);
@@ -255,22 +182,10 @@ async fn main() {
                     game_state = GameState::Playing;
                 }
                 enemies.display();
-
-                let ship_frame = ship_sprite.frame();
-                draw_texture_ex(
-                    &ship_texture,
-                    ship.x - ship_frame.dest_size.x,
-                    ship.y - ship_frame.dest_size.y,
-                    WHITE,
-                    DrawTextureParams {
-                        dest_size: Some(ship_frame.dest_size * 2.0),
-                        source: Some(ship_frame.source_rect),
-                        ..Default::default()
-                    },
-                );
+                ship.display();
+                bullets.display();
 
                 display_score(&score, &high_score);
-                bullets.display();
                 display_paused();
                 display_game_name();
             }
