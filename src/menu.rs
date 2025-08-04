@@ -1,3 +1,5 @@
+/* Structure Menu (gestion du menu) */
+
 use macroquad::prelude::*;
 use macroquad::ui::{Skin, hash, root_ui};
 
