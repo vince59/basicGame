@@ -76,31 +76,6 @@ async fn main() {
 
     let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
     ship_texture.set_filter(FilterMode::Nearest);
-    let bullet_texture: Texture2D = load_texture("laser-bolts.png")
-        .await
-        .expect("Couldn't load file");
-    bullet_texture.set_filter(FilterMode::Nearest);
-
-    let mut bullet_sprite = AnimatedSprite::new(
-        16,
-        16,
-        &[
-            Animation {
-                name: "bullet".to_string(),
-                row: 0,
-                frames: 2,
-                fps: 12,
-            },
-            Animation {
-                name: "bolt".to_string(),
-                row: 1,
-                frames: 2,
-                fps: 12,
-            },
-        ],
-        true,
-    );
-    bullet_sprite.set_animation(1);
 
     let mut ship_sprite = AnimatedSprite::new(
         16,
@@ -255,7 +230,7 @@ async fn main() {
 
                 enemies.display(&enemy_small_sprite, &enemy_small_texture);
                 // on dessine les balles
-                bullets.display(&bullet_sprite, &bullet_texture);
+                bullets.display();
                 // on dessine le vaisseau
                 // test de collison entre les enemies et le vaisseau
                 // affichage de game over si collison
@@ -276,7 +251,6 @@ async fn main() {
                 );
 
                 ship_sprite.update();
-                bullet_sprite.update();
                 enemy_small_sprite.update();
                 bullets.update(delta_time); // on déplace les balles
                 enemies.update(delta_time);
@@ -323,7 +297,7 @@ async fn main() {
                 );
 
                 display_score(&score, &high_score);
-                bullets.display(&bullet_sprite, &bullet_texture);
+                bullets.display();
                 display_paused();
                 display_game_name();
             }

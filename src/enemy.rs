@@ -1,11 +1,8 @@
 /* Structure EnnemiesSet (gestion des ennemis) */
 
 use crate::Shape;
-use macroquad::audio::{Sound, load_sound, play_sound_once};
 use macroquad::experimental::animation::AnimatedSprite;
 use macroquad::prelude::*;
-use macroquad_particles::{self as particles, AtlasConfig};
-use macroquad_particles::{Emitter, EmitterConfig};
 
 pub struct EnemiesSet {
     pub enemies: Vec<Shape>,
@@ -42,11 +39,6 @@ impl EnemiesSet {
     // suppression des ennemis
     pub fn clear(&mut self) {
         self.enemies.clear();
-    }
-
-    // Ajout d'une ennemi
-    pub fn push(&mut self, shape: Shape) {
-        self.enemies.push(shape);
     }
 
     // mise à jour de la positions des ennemis
