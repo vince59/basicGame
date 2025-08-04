@@ -1,12 +1,14 @@
 /* Structure EnnemiesSet (gestion des ennemis) */
 
 use crate::Shape;
-use macroquad::prelude::*;
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
+use macroquad::prelude::*;
 
 pub struct EnemiesSet {
     pub enemies: Vec<Shape>,
     enemy_small_sprite: AnimatedSprite,
+    enemy_medium_sprite: AnimatedSprite,
+    enemy_big_sprite: AnimatedSprite,
     enemy_small_texture: Texture2D,
     enemy_medium_texture: Texture2D,
     enemy_big_texture: Texture2D,
@@ -14,7 +16,7 @@ pub struct EnemiesSet {
 
 impl EnemiesSet {
     pub async fn new() -> EnemiesSet {
-        let mut enemy_small_sprite = AnimatedSprite::new(
+        let enemy_small_sprite = AnimatedSprite::new(
             17,
             16,
             &[Animation {
@@ -25,7 +27,28 @@ impl EnemiesSet {
             }],
             true,
         );
-
+        let enemy_medium_sprite = AnimatedSprite::new(
+            32,
+            16,
+            &[Animation {
+                name: "enemy_medium".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            }],
+            true,
+        );
+        let enemy_big_sprite = AnimatedSprite::new(
+            32,
+            32,
+            &[Animation {
+                name: "enemy_big".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            }],
+            true,
+        );
         let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
             .await
             .expect("Couldn't load file");
@@ -43,24 +66,30 @@ impl EnemiesSet {
 
         EnemiesSet {
             enemies: vec![],
-            enemy_small_sprite,
             enemy_small_texture,
             enemy_medium_texture,
             enemy_big_texture,
+            enemy_small_sprite,
+            enemy_medium_sprite,
+            enemy_big_sprite
         }
     }
 
     pub fn display(&self) {
-        let enemy_frame = self.enemy_small_sprite.frame();
         for enemy in &self.enemies {
+            let (texture,frame) = match enemy.size {
+                _ if enemy.size <= 32.0 => (&self.enemy_small_texture,self.enemy_small_sprite.frame()),
+                33.0..=48.0 => (&self.enemy_medium_texture,self.enemy_medium_sprite.frame()),
+                _ => (&self.enemy_big_texture,self.enemy_big_sprite.frame()),
+            };
             draw_texture_ex(
-                &self.enemy_small_texture,
+                &texture,
                 enemy.x - enemy.size / 2.0,
                 enemy.y - enemy.size / 2.0,
                 WHITE,
                 DrawTextureParams {
                     dest_size: Some(vec2(enemy.size, enemy.size)),
-                    source: Some(enemy_frame.source_rect),
+                    source: Some(frame.source_rect),
                     ..Default::default()
                 },
             );
