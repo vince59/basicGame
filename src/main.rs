@@ -1,6 +1,10 @@
 mod bullet;
+mod text_display;
+mod enemy;
 
 use bullet::*;
+use text_display::*;
+use enemy::*;
 use macroquad::audio::{ PlaySoundParams, load_sound, play_sound, play_sound_once, stop_sound};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
@@ -42,128 +46,6 @@ enum GameState {
     GameOver,
 }
 
-pub fn display_game_over(font: &Font) {
-    let text = "GAME OVER!";
-    let text_params = TextParams {
-        font_size: 50,
-        font: Some(font),
-        color: RED,
-        font_scale: 1.0,
-        ..Default::default()
-    };
-    let text_dimensions = measure_text(
-        text,
-        text_params.font,
-        text_params.font_size,
-        text_params.font_scale,
-    );
-    draw_text_ex(
-        text,
-        screen_width() / 2.0 - text_dimensions.width / 2.0,
-        screen_height() / 2.0 + text_dimensions.height / 2.0,
-        text_params,
-    );
-}
-
-pub fn display_congratulations(font: &Font) {
-    let text = "CONGRATULATIONS ! you reached a high score";
-    let text_params = TextParams {
-        font_size: 25,
-        font: Some(font),
-        color: YELLOW,
-        font_scale: 1.0,
-        ..Default::default()
-    };
-    let text_dimensions = measure_text(
-        text,
-        text_params.font,
-        text_params.font_size,
-        text_params.font_scale,
-    );
-    draw_text_ex(
-        text,
-        screen_width() / 2.0 - text_dimensions.width / 2.0,
-        screen_height() / 2.0 + text_dimensions.height / 2.0 + 60.0,
-        text_params,
-    );
-}
-
-pub fn display_score(score: &u32, high_score: &u32) {
-    draw_text(
-        format!("Score: {}", score).as_str(),
-        10.0,
-        35.0,
-        25.0,
-        WHITE,
-    );
-    let highscore_text = format!("High score: {}", high_score);
-    let text_dimensions = measure_text(highscore_text.as_str(), None, 25, 1.0);
-    draw_text(
-        highscore_text.as_str(),
-        screen_width() - text_dimensions.width - 10.0,
-        35.0,
-        25.0,
-        WHITE,
-    );
-}
-
-pub fn display_enemies(
-    enemies: &Vec<Shape>,
-    enemy_small_sprite: &AnimatedSprite,
-    enemy_small_texture: &Texture2D,
-) {
-    let enemy_frame = enemy_small_sprite.frame();
-    for enemy in enemies {
-        draw_texture_ex(
-            enemy_small_texture,
-            enemy.x - enemy.size / 2.0,
-            enemy.y - enemy.size / 2.0,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(vec2(enemy.size, enemy.size)),
-                source: Some(enemy_frame.source_rect),
-                ..Default::default()
-            },
-        );
-    }
-}
-
-pub fn display_paused() {
-    let text = "Paused";
-    let text_dimensions = measure_text(text, None, 50, 1.0);
-    draw_text(
-        text,
-        screen_width() / 2.0 - text_dimensions.width / 2.0,
-        screen_height() / 2.0,
-        50.0,
-        WHITE,
-    );
-}
-
-pub fn display_game_name() {
-    let text = "Asteroïd";
-    let text_dimensions = measure_text(text, None, 50, 1.0);
-    draw_text(
-        text,
-        screen_width() / 2.0 - text_dimensions.width / 2.0,
-        text_dimensions.height + 10.0,
-        50.0,
-        YELLOW,
-    );
-}
-
-pub fn display_press_space() {
-    let text = "Press space";
-    let text_dimensions = measure_text(text, None, 50, 1.0);
-    draw_text(
-        text,
-        screen_width() / 2.0 - text_dimensions.width / 2.0,
-        screen_height() / 2.0,
-        50.0,
-        WHITE,
-    );
-}
-
 #[macroquad::main("Astéroïd")]
 async fn main() {
     set_pc_assets_folder("assets");
@@ -179,8 +61,9 @@ async fn main() {
         y: screen_height() / 2.0,
         collided: false,
     };
-    let mut enemies: Vec<Shape> = vec![];
+
     let mut bullets: BulletsSet = BulletsSet::new().await;
+    let mut enemies: EnemiesSet = EnemiesSet::new();
 
     let font = load_ttf_font("test.ttf").await.unwrap();
 
@@ -370,9 +253,15 @@ async fn main() {
                     game_state = GameState::Paused;
                 }
 
+                enemies.display(&enemy_small_sprite, &enemy_small_texture);
                 // on dessine les balles
                 bullets.display(&bullet_sprite, &bullet_texture);
                 // on dessine le vaisseau
+                // test de collison entre les enemies et le vaisseau
+                // affichage de game over si collison
+                if enemies.get_list().iter().any(|enemy| ship.collides_with(enemy)) {
+                    game_state = GameState::GameOver;
+                }
                 let ship_frame = ship_sprite.frame();
                 draw_texture_ex(
                     &ship_texture,
@@ -389,27 +278,8 @@ async fn main() {
                 ship_sprite.update();
                 bullet_sprite.update();
                 enemy_small_sprite.update();
-
-                // ajout des ennemies : 5% de chance d'avoir un nouvel ennemie
-                if rand::gen_range(0, 99) >= 95 {
-                    let size = rand::gen_range(16.0, 64.0);
-                    enemies.push(Shape {
-                        size,
-                        speed: rand::gen_range(50.0, 150.0),
-                        x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
-                        y: -size,
-                        collided: false,
-                    });
-                }
-                // on les fait tomber
-                for enemy in &mut enemies {
-                    enemy.y += enemy.speed * delta_time;
-                }
-                enemies.retain(|enemy| enemy.y < screen_height() + enemy.size); // on vire les ennemie hors écran
-
-                // on déplace les balles
-                bullets.update(delta_time);
-
+                bullets.update(delta_time); // on déplace les balles
+                enemies.update(delta_time);
                 // si il y a une collison entre une balle et un ennemi
 
                 let mut hit = |enemy: &mut Shape| {
@@ -419,21 +289,11 @@ async fn main() {
                 };
 
                 // pour tous les ennemis et pour toutes les balles on regarde s'il y a une collision
-                for enemy in enemies.iter_mut() {
+                for enemy in enemies.get_list() {
                     bullets.collides_with(enemy, &mut hit);
                 }
 
-                enemies.retain(|enemy| !enemy.collided); // on vire les ennemies touchés
-                bullets.retain(); // on vire les balles touchées et hors écran
-
-                // on dessine les ennemies
-                display_enemies(&enemies, &enemy_small_sprite, &enemy_small_texture);
-
-                // test de collison entre les enemies et le vaisseau
-                // affichage de game over si collison
-                if enemies.iter().any(|enemy| ship.collides_with(enemy)) {
-                    game_state = GameState::GameOver;
-                }
+                
             }
             GameState::Paused => {
                 stop_sound(&theme_music);
@@ -447,7 +307,7 @@ async fn main() {
                     );
                     game_state = GameState::Playing;
                 }
-                display_enemies(&enemies, &enemy_small_sprite, &enemy_small_texture);
+                enemies.display(&enemy_small_sprite, &enemy_small_texture);
 
                 let ship_frame = ship_sprite.frame();
                 draw_texture_ex(

@@ -67,10 +67,6 @@ impl BulletsSet {
         for bullet in &mut self.bullets {
             bullet.y -= bullet.speed * delta_time;
         }
-    }
-
-    // suppression des balles et des explosions
-    pub fn retain(&mut self) {
         self.bullets.retain(|bullet| !bullet.collided); // on vire les balles touchées
         self.bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0); // on vire les balles hors écran
         self.explosions.retain(|(explosion, _)| explosion.config.emitting); // on vire les explosions terminées
