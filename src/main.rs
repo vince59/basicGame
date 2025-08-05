@@ -6,6 +6,7 @@ mod score;
 mod shader;
 mod ship;
 mod text_display;
+mod buildings;
 
 use bullets::*;
 use enemies::*;
@@ -15,6 +16,7 @@ use score::*;
 use shader::*;
 use ship::*;
 use text_display::*;
+use buildings::*;
 
 use macroquad::prelude::*;
 
@@ -74,6 +76,7 @@ async fn main() {
     let mut game_state = GameState::MainMenu;
     let mut bullets = BulletsSet::new().await;
     let mut enemies = EnemiesSet::new().await;
+    let mut buildings = BuildingsSet::new().await;
     let mut ship = Ship::new().await;
     let mut score = Score::new();
     let mut menu = Menu::new().await;
@@ -81,9 +84,11 @@ async fn main() {
     let font = load_ttf_font("test.ttf").await.unwrap();
     let mut starfield = Shader::new();
     let mut theme_music = Music::new().await;
+    buildings.init();
     loop {
         clear_background(BLACK);
         starfield.display();
+        buildings.display();
         match game_state {
                 GameState::MainMenu => {
                 theme_music.stop();
