@@ -57,7 +57,7 @@ enum GameState {
 
 fn window_conf() -> Conf {
     Conf {
-        window_width: 1000,   // Largeur de la fenêtre
+        window_width: 800,   // Largeur de la fenêtre
         window_height: 600,  // Hauteur de la fenêtre
         window_title: "Asteroïd".to_owned(),
         fullscreen: false,   // Si tu veux que la fenêtre soit en plein écran ou non
@@ -85,7 +85,8 @@ async fn main() {
         clear_background(BLACK);
         starfield.display();
         match game_state {
-            GameState::MainMenu => {
+                GameState::MainMenu => {
+                theme_music.stop();
                 let mut play = || {
                     enemies.clear();
                     bullets.clear();
