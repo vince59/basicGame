@@ -84,7 +84,7 @@ async fn main() {
     let font = load_ttf_font("test.ttf").await.unwrap();
     let mut starfield = Shader::new();
     let mut theme_music = Music::new().await;
-    buildings.init();
+    
     loop {
         clear_background(BLACK);
         starfield.display();
