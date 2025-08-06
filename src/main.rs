@@ -7,6 +7,7 @@ mod shader;
 mod ship;
 mod text_display;
 mod buildings;
+mod fires;
 
 use bullets::*;
 use enemies::*;
@@ -17,6 +18,7 @@ use shader::*;
 use ship::*;
 use text_display::*;
 use buildings::*;
+use fires::*;
 
 use macroquad::prelude::*;
 use crate::miniquad::window::set_window_position;
@@ -80,6 +82,7 @@ async fn main() {
     let mut enemies = EnemiesSet::new().await;
     let mut buildings = BuildingsSet::new().await;
     let mut ship = Ship::new().await;
+    let mut fires = FiresSet::new().await;
     let mut score = Score::new();
     let mut menu = Menu::new().await;
     build_textures_atlas();
@@ -100,6 +103,7 @@ async fn main() {
                     ship.reset();
                     score.reset();
                     theme_music.reset();
+                    fires.clear();
                     game_state = GameState::Playing;
                 };
                 menu.display(&mut play);
@@ -111,11 +115,13 @@ async fn main() {
                 bullets.update(delta_time);
                 enemies.update(delta_time);
                 buildings.update();
+                fires.update(delta_time);
                 // affichages
                 enemies.display();
                 bullets.display();
                 score.display();
                 buildings.display();
+                fires.display();
 
                 if is_key_pressed(KeyCode::Space) {
                     bullets.push(ship.shoot());
@@ -138,7 +144,13 @@ async fn main() {
 
                 // s'il y a une collision entre un ennemi et un bâtiment
                 let mut hit_building_enemy = |building: &mut Shape| {
-                    building.collided = true;
+                    building.collided = true; // on vire le bâtiment
+                    fires.push(&building); // on met un feux à la place
+                };
+
+                // s'il y a une collision entre un ennemi et un feux
+                let mut hit_fire_enemy = |fire: &mut Shape| {
+                    // pour l'instant on fait rien
                 };
 
                 // Vérification des collisions
@@ -147,6 +159,9 @@ async fn main() {
                 }
                 for building in buildings.get_list() {
                     enemies.collides_with(building, &mut hit_building_enemy); // collision avec un bâtiment
+                }
+                for fire in fires.get_list() {
+                    enemies.collides_with(fire, &mut hit_fire_enemy); // collision avec un feux
                 }
                 enemies.collides_with(ship.get_shape(), &mut hit_ship_enemy); // collision avec le vaisseau
             }
@@ -161,6 +176,7 @@ async fn main() {
                 bullets.display();
                 score.display();
                 buildings.display();
+                fires.display();
                 display_paused();
                 display_game_name();
             }

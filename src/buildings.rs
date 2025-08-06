@@ -16,7 +16,7 @@ pub struct BuildingData {
 pub struct Building {
     texture: Texture2D,
     sprite: AnimatedSprite,
-    shape: Shape,
+    pub shape: Shape,
 }
 
 impl BuildingData {
