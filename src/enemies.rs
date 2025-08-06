@@ -1,6 +1,6 @@
 /* Structure EnnemiesSet (gestion des ennemis) */
 
-use crate::Shape;
+use crate::{Collision, Shape};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 
@@ -128,14 +128,14 @@ impl EnemiesSet {
         &mut self.enemies
     }
 
-    pub fn collides_with<F>(&mut self, shape: &mut Shape, f: &mut F)
+    pub fn collides_with<F>(&mut self, shape: &mut Shape, collision: &Collision, f: &mut F)
     where
-        F: FnMut(&mut Shape),
+        F: FnMut(&mut Shape,&mut Shape, &Collision),
     {
         for enemy in self.enemies.iter_mut() {
             if enemy.collides_with(&shape) {
                 enemy.collided = true;
-                f(shape); // Appelle la callback pour faire d'autres choses en cas de collision
+                f(enemy,shape,collision); // Appelle la callback pour faire d'autres choses en cas de collision
             }
         }
     }

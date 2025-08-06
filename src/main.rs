@@ -1,27 +1,29 @@
+mod buildings;
 mod bullets;
 mod enemies;
+mod explosions;
+mod fires;
 mod menu;
 mod music;
 mod score;
 mod shader;
 mod ship;
 mod text_display;
-mod buildings;
-mod fires;
 
+use buildings::*;
 use bullets::*;
 use enemies::*;
+use explosions::*;
+use fires::*;
 use menu::*;
 use music::*;
 use score::*;
 use shader::*;
 use ship::*;
 use text_display::*;
-use buildings::*;
-use fires::*;
 
-use macroquad::prelude::*;
 use crate::miniquad::window::set_window_position;
+use macroquad::prelude::*;
 
 //https://vince59.github.io/basicGame/
 
@@ -61,13 +63,20 @@ enum GameState {
     GameOver,
 }
 
+enum Collision {
+    BulletEnemy,
+    ShipEnemy,
+    BuildingEnemy,
+    FireEnemy,
+}
+
 fn window_conf() -> Conf {
     Conf {
-        window_width: 800,   // Largeur de la fenêtre
-        window_height: 800,  // Hauteur de la fenêtre
+        window_width: 800,  // Largeur de la fenêtre
+        window_height: 800, // Hauteur de la fenêtre
         window_title: "Asteroïd".to_owned(),
-        fullscreen: false,   // Si tu veux que la fenêtre soit en plein écran ou non
-        ..Conf::default() 
+        fullscreen: false, // Si tu veux que la fenêtre soit en plein écran ou non
+        ..Conf::default()
     }
 }
 
@@ -79,6 +88,7 @@ async fn main() {
 
     let mut game_state = GameState::MainMenu;
     let mut bullets = BulletsSet::new().await;
+    let mut explosions = ExplosionsSet::new().await;
     let mut enemies = EnemiesSet::new().await;
     let mut buildings = BuildingsSet::new().await;
     let mut ship = Ship::new().await;
@@ -89,16 +99,17 @@ async fn main() {
     let font = load_ttf_font("test.ttf").await.unwrap();
     let mut starfield = Shader::new();
     let mut theme_music = Music::new().await;
-    
+
     loop {
         clear_background(BLACK);
         starfield.display();
         match game_state {
-                GameState::MainMenu => {
+            GameState::MainMenu => {
                 theme_music.stop();
                 let mut play = || {
                     enemies.clear();
                     bullets.clear();
+                    explosions.clear();
                     buildings.reset();
                     ship.reset();
                     score.reset();
@@ -113,6 +124,7 @@ async fn main() {
                 // mise à jour des composants du jeux
                 ship.update(delta_time);
                 bullets.update(delta_time);
+                explosions.update();
                 enemies.update(delta_time);
                 buildings.update();
                 fires.update(delta_time);
@@ -122,6 +134,7 @@ async fn main() {
                 score.display();
                 buildings.display();
                 fires.display();
+                explosions.display();
 
                 if is_key_pressed(KeyCode::Space) {
                     bullets.push(ship.shoot());
@@ -129,41 +142,46 @@ async fn main() {
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
-
-                // si il y a une collison entre une balle et un ennemi
-                let mut hit_enemy_bullet = |enemy: &mut Shape| {
-                    enemy.collided = true;
-                    score.increase(enemy.size.round() as u32);
+                let mut tmp_fires = fires.clone();
+                let mut collision_handler = |enemy: &mut Shape,shape: &mut Shape, collision: &Collision| {
+                    match collision {
+                        Collision::BulletEnemy => {
+                            enemy.collided = true;
+                            explosions.push(enemy); // on ajoute une explosion
+                            score.increase(enemy.size.round() as u32);
+                        }
+                        Collision::ShipEnemy => {
+                            enemy.collided = true;
+                            game_state = GameState::GameOver;
+                        }
+                        Collision::BuildingEnemy => {
+                            explosions.push(enemy); // on ajoute une explosion
+                            shape.collided = true; // on vire le bâtiment
+                            fires.push(&shape); // on met un feux à la place
+                        }
+                        Collision::FireEnemy => {
+                            explosions.push(enemy); // on ajoute une explosion
+                        }
+                    }
                 };
 
-                // s'il y a une collision entre un ennemi et le vaisseau
-                let mut hit_ship_enemy = |ship: &mut Shape| {
-                    ship.collided = true;
-                    game_state = GameState::GameOver;
-                };
-
-                // s'il y a une collision entre un ennemi et un bâtiment
-                let mut hit_building_enemy = |building: &mut Shape| {
-                    building.collided = true; // on vire le bâtiment
-                    fires.push(&building); // on met un feux à la place
-                };
-
-                // s'il y a une collision entre un ennemi et un feux
-                let mut hit_fire_enemy = |fire: &mut Shape| {
-                    // pour l'instant on fait rien
-                };
-
-                // Vérification des collisions
+                // Collision avec une balle
                 for enemy in enemies.get_list() {
-                    bullets.collides_with(enemy, &mut hit_enemy_bullet); // collision avec une balle
+                    bullets.collides_with(enemy, &Collision::BulletEnemy, &mut collision_handler);                 
                 }
+
+                // Collision avec un bâtiment
                 for building in buildings.get_list() {
-                    enemies.collides_with(building, &mut hit_building_enemy); // collision avec un bâtiment
+                    enemies.collides_with(building, &Collision::BuildingEnemy,&mut collision_handler,); 
                 }
-                for fire in fires.get_list() {
-                    enemies.collides_with(fire, &mut hit_fire_enemy); // collision avec un feux
+
+                // collision avec un feux
+                for fire in tmp_fires.get_list() {
+                    enemies.collides_with(fire, &Collision::FireEnemy, &mut collision_handler); 
                 }
-                enemies.collides_with(ship.get_shape(), &mut hit_ship_enemy); // collision avec le vaisseau
+
+                // collision avec le vaisseau
+                enemies.collides_with(ship.get_shape(),&Collision::ShipEnemy,&mut collision_handler,); 
             }
             GameState::Paused => {
                 theme_music.stop();

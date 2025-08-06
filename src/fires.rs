@@ -4,6 +4,7 @@ use crate::Shape;
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 
+#[derive(Clone)]
 pub struct FiresSet {
     pub fires: Vec<Shape>,
     fire_sprite: AnimatedSprite,
