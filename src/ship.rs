@@ -104,7 +104,7 @@ impl Ship {
         self.ship.y = clamp(
             self.ship.y,
             self.ship.size,
-            screen_height() - self.ship.size,
+            screen_height() - self.ship.size-110.0,
         );
         self.display();
         self.ship_sprite.update();

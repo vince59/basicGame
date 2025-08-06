@@ -19,6 +19,7 @@ use text_display::*;
 use buildings::*;
 
 use macroquad::prelude::*;
+use crate::miniquad::window::set_window_position;
 
 //https://vince59.github.io/basicGame/
 
@@ -60,7 +61,7 @@ enum GameState {
 fn window_conf() -> Conf {
     Conf {
         window_width: 800,   // Largeur de la fenêtre
-        window_height: 600,  // Hauteur de la fenêtre
+        window_height: 800,  // Hauteur de la fenêtre
         window_title: "Asteroïd".to_owned(),
         fullscreen: false,   // Si tu veux que la fenêtre soit en plein écran ou non
         ..Conf::default() 
@@ -69,7 +70,7 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    println!("{} {}",screen_width(), screen_height());
+    set_window_position(10, 10);
     set_pc_assets_folder("assets");
     rand::srand(miniquad::date::now() as u64);
 
@@ -149,6 +150,7 @@ async fn main() {
                 ship.display();
                 bullets.display();
                 score.display();
+                buildings.display();
                 display_paused();
                 display_game_name();
             }
