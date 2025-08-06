@@ -56,7 +56,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        let mut x =29.;
+        let mut x = 29.;
         data.push(BuildingData {
             texture: texture,
             width: 49,
@@ -69,7 +69,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=90.0;
+        x += 90.0;
         data.push(BuildingData {
             texture: texture,
             width: 90,
@@ -82,7 +82,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=95.0;
+        x += 95.0;
         data.push(BuildingData {
             texture: texture,
             width: 90,
@@ -91,11 +91,9 @@ impl BuildingsSet {
             name: "factory".to_string(),
         });
 
-        let texture: Texture2D = load_texture("labo.png")
-            .await
-            .expect("Couldn't load file");
+        let texture: Texture2D = load_texture("labo.png").await.expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=80.0;
+        x += 80.0;
         data.push(BuildingData {
             texture: texture,
             width: 56,
@@ -104,11 +102,9 @@ impl BuildingsSet {
             name: "labo".to_string(),
         });
 
-        let texture: Texture2D = load_texture("radio.png")
-            .await
-            .expect("Couldn't load file");
+        let texture: Texture2D = load_texture("radio.png").await.expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=80.0;
+        x += 80.0;
         data.push(BuildingData {
             texture: texture,
             width: 90,
@@ -121,7 +117,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=100.0;
+        x += 100.0;
         data.push(BuildingData {
             texture: texture,
             width: 89,
@@ -134,7 +130,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=100.0;
+        x += 100.0;
         data.push(BuildingData {
             texture: texture,
             width: 89,
@@ -147,7 +143,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=100.0;
+        x += 100.0;
         data.push(BuildingData {
             texture: texture,
             width: 89,
@@ -160,7 +156,7 @@ impl BuildingsSet {
             .await
             .expect("Couldn't load file");
         texture.set_filter(FilterMode::Nearest);
-        x+=100.0;
+        x += 100.0;
         data.push(BuildingData {
             texture: texture,
             width: 89,
@@ -192,6 +188,13 @@ impl BuildingsSet {
                 },
             );
         }
+    }
+
+    pub fn get_list(&mut self) -> Vec<&mut Shape> {
+        self.buildings
+            .iter_mut()
+            .map(|building| &mut building.shape)
+            .collect()
     }
 
     // mise à jour des batiments

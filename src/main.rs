@@ -23,6 +23,7 @@ use crate::miniquad::window::set_window_position;
 
 //https://vince59.github.io/basicGame/
 
+#[derive(Clone)]
 pub struct Shape {
     size: f32,
     speed: f32,
@@ -89,7 +90,6 @@ async fn main() {
     loop {
         clear_background(BLACK);
         starfield.display();
-        buildings.display();
         match game_state {
                 GameState::MainMenu => {
                 theme_music.stop();
@@ -109,11 +109,12 @@ async fn main() {
                 ship.update(delta_time);
                 bullets.update(delta_time);
                 enemies.update(delta_time);
-
+                buildings.update();
                 // affichages
                 enemies.display();
                 bullets.display();
                 score.display();
+                buildings.display();
 
                 if is_key_pressed(KeyCode::Space) {
                     bullets.push(ship.shoot());
@@ -134,9 +135,17 @@ async fn main() {
                     game_state = GameState::GameOver;
                 };
 
+                // s'il y a une collision entre un ennemi et un bâtiment
+                let mut hit_building_enemy = |building: &mut Shape| {
+                    building.collided = true;
+                };
+
                 // Vérification des collisions
                 for enemy in enemies.get_list() {
                     bullets.collides_with(enemy, &mut hit_enemy_bullet); // collision avec une balle
+                }
+                for building in buildings.get_list() {
+                    enemies.collides_with(building, &mut hit_building_enemy); // collision avec un bâtiment
                 }
                 enemies.collides_with(ship.get_shape(), &mut hit_ship_enemy); // collision avec le vaisseau
             }
