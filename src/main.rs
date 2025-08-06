@@ -96,6 +96,7 @@ async fn main() {
                 let mut play = || {
                     enemies.clear();
                     bullets.clear();
+                    buildings.reset();
                     ship.reset();
                     score.reset();
                     theme_music.reset();
