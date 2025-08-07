@@ -38,7 +38,13 @@ impl BuildingData {
                     row: 0,
                     frames: 1,
                     fps: 12,
-                }],
+                },
+                Animation {
+                    name: "fire".to_string(),
+                    row: 1,
+                    frames: 10,
+                    fps: 12,
+                },],
                 true,
             ),
         }
@@ -59,31 +65,31 @@ pub struct BuildingsSet {
 
 impl BuildingsSet {
     pub async fn new() -> BuildingsSet {
-        let temple_texture: Texture2D = load_texture("temple.png").await.expect("Couldn't load file");
+        let temple_texture: Texture2D = load_texture("temple_temple_fire.png").await.expect("Couldn't load file");
         temple_texture.set_filter(FilterMode::Nearest);
 
-        let space_port_texture: Texture2D = load_texture("space_port.png").await.expect("Couldn't load file");
+        let space_port_texture: Texture2D = load_texture("space_port_space_port_fire.png").await.expect("Couldn't load file");
         space_port_texture.set_filter(FilterMode::Nearest);
 
-        let factory_texture: Texture2D = load_texture("factory.png").await.expect("Couldn't load file");
+        let factory_texture: Texture2D = load_texture("factory_factory_fire.png").await.expect("Couldn't load file");
         factory_texture.set_filter(FilterMode::Nearest);
 
-        let labo_texture: Texture2D = load_texture("labo.png").await.expect("Couldn't load file");
+        let labo_texture: Texture2D = load_texture("labo_labo_fire.png").await.expect("Couldn't load file");
         labo_texture.set_filter(FilterMode::Nearest);
 
-        let radio_texture: Texture2D = load_texture("radio.png").await.expect("Couldn't load file");
+        let radio_texture: Texture2D = load_texture("radio_radio_fire.png").await.expect("Couldn't load file");
         radio_texture.set_filter(FilterMode::Nearest);
 
-        let greenhouse_texture: Texture2D = load_texture("greenhouse.png").await.expect("Couldn't load file");
+        let greenhouse_texture: Texture2D = load_texture("greenhouse_greenhouse_fire.png").await.expect("Couldn't load file");
         greenhouse_texture.set_filter(FilterMode::Nearest);
 
-        let greenhouse2_texture: Texture2D = load_texture("greenhouse2.png").await.expect("Couldn't load file");
+        let greenhouse2_texture: Texture2D = load_texture("greenhouse2_greenhouse2_fire.png").await.expect("Couldn't load file");
         greenhouse2_texture.set_filter(FilterMode::Nearest);
 
-        let greenhouse3_texture: Texture2D = load_texture("greenhouse3.png").await.expect("Couldn't load file");
+        let greenhouse3_texture: Texture2D = load_texture("greenhouse3_greenhouse3_fire.png").await.expect("Couldn't load file");
         greenhouse3_texture.set_filter(FilterMode::Nearest);
 
-        let rocket_texture: Texture2D = load_texture("rocket.png").await.expect("Couldn't load file");
+        let rocket_texture: Texture2D = load_texture("rocket_rocket_fire.png").await.expect("Couldn't load file");
         rocket_texture.set_filter(FilterMode::Nearest);
 
         let buildings: Vec<Building> = vec![];
@@ -104,10 +110,10 @@ impl BuildingsSet {
     pub fn reset(&mut self) {
         let mut data: Vec<BuildingData> = vec![];
         let mut x = 29.;
-        data.push(BuildingData {
+         data.push(BuildingData {
             texture: self.temple_texture.clone(),
-            width: 49,
-            height: 58,
+            width: 86,
+            height: 80,
             x: x,
             name: "temple".to_string(),
         });
@@ -120,7 +126,7 @@ impl BuildingsSet {
             x: x,
             name: "space_port".to_string(),
         });
-
+        
         x += 95.0;
         data.push(BuildingData {
             texture: self.factory_texture.clone(),
@@ -129,12 +135,12 @@ impl BuildingsSet {
             x: x,
             name: "factory".to_string(),
         });
-
+        
         x += 80.0;
         data.push(BuildingData {
             texture: self.labo_texture.clone(),
-            width: 56,
-            height: 58,
+            width: 92,
+            height: 67,
             x: x,
             name: "labo".to_string(),
         });
@@ -160,7 +166,7 @@ impl BuildingsSet {
         x += 100.0;
         data.push(BuildingData {
             texture: self.greenhouse2_texture.clone(),
-            width: 89,
+            width: 88,
             height: 58,
             x: x,
             name: "greenhouse2".to_string(),
@@ -183,7 +189,7 @@ impl BuildingsSet {
             x: x,
             name: "rocket".to_string(),
         });
-        let buildings: Vec<Building> = vec![];
+        
         for mut d in data {
             self.buildings.push(d.get_building());
         }
@@ -216,6 +222,15 @@ impl BuildingsSet {
 
     // mise à jour des batiments
     pub fn update(&mut self) {
-        self.buildings.retain(|building| !building.shape.collided); // on vire les bâtiment touchés
+        for building in &mut self.buildings {
+            if building.shape.collided {
+                building.sprite.set_animation(1);
+            } else {
+                building.sprite.set_animation(0);
+            }
+            building.sprite.update();
+        }
+        
+        //self.buildings.retain(|building| !building.shape.collided); // on vire les bâtiment touchés
     }
 }

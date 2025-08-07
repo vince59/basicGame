@@ -156,8 +156,8 @@ async fn main() {
                         }
                         Collision::BuildingEnemy => {
                             explosions.push(enemy); // on ajoute une explosion
-                            shape.collided = true; // on vire le bâtiment
-                            fires.push(&shape); // on met un feux à la place
+                            shape.collided = true; // batiment touché
+                            //fires.push(&shape); // on met un feux à la place
                         }
                         Collision::FireEnemy => {
                             explosions.push(enemy); // on ajoute une explosion
