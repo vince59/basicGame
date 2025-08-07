@@ -230,7 +230,19 @@ impl BuildingsSet {
             }
             building.sprite.update();
         }
-        
-        //self.buildings.retain(|building| !building.shape.collided); // on vire les bâtiment touchés
+    }
+
+    pub fn all_destroyed(&mut self) -> bool {
+        let mut destroyed= true;
+        for building in &mut self.buildings {
+            if building.shape.collided {
+                building.sprite.set_animation(1);
+            } else {
+                building.sprite.set_animation(0);
+                destroyed = false;
+            }
+            building.sprite.update();
+        }
+        destroyed
     }
 }
