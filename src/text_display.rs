@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 pub fn display_game_over(font: &Font) {
-    let text = "GAME OVER! Press LeftShift";
+    let text = "GAME OVER!";
     let text_params = TextParams {
         font_size: 50,
         font: Some(font),
@@ -19,7 +19,14 @@ pub fn display_game_over(font: &Font) {
         text,
         screen_width() / 2.0 - text_dimensions.width / 2.0,
         screen_height() / 2.0 + text_dimensions.height / 2.0,
-        text_params,
+        text_params.clone(),
+    );
+    let text = "Press LeftShift to continue ...";
+    draw_text_ex(
+        text,
+        screen_width() / 2.0 - text_dimensions.width,
+        screen_height() / 2.0 + text_dimensions.height*2.0,
+        text_params.clone(),
     );
 }
 
