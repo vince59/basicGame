@@ -105,6 +105,8 @@ impl EnemiesSet {
     // suppression des ennemis
     pub fn clear(&mut self) {
         self.enemies.clear();
+        self.number=0;
+
     }
 
     // mise à jour de la positions des ennemis

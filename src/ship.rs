@@ -88,6 +88,8 @@ impl Ship {
     pub fn reset(&mut self) {
         self.ship.x = screen_width() / 2.0;
         self.ship.y = screen_height() / 2.0;
+        self.nb_ammo=NB_AMMO;
+        self.ship.life=NB_LIFE;
     }
 
     fn display_life(&self){
