@@ -32,7 +32,7 @@ pub struct Shape {
     x: f32,
     y: f32,
     collided: bool,
-    life: u32,
+    life: i32,
 }
 
 impl Shape {
@@ -147,8 +147,8 @@ async fn main() {
                             }
                             Collision::ShipEnemy => {
                                 enemy.collided = true;
-                                shape.life -= if shape.life > 0 { 1 } else { 0 };
-                                if shape.life == 0 {
+                                shape.life -=1;
+                                if shape.life == -1 {
                                     game_state = GameState::GameOver;
                                 }
                             }

@@ -7,6 +7,7 @@ use macroquad::experimental::animation::Animation;
 use macroquad::prelude::*;
 
 const MOVEMENT_SPEED: f32 = 500.0;
+const NB_LIFE: i32 = 5;
 
 pub struct Ship {
     pub ship: Shape,
@@ -14,6 +15,7 @@ pub struct Ship {
     pub sound_laser: Sound,
     ship_texture: Texture2D,
     heart: Texture2D,
+    heart2: Texture2D,
 }
 
 impl Ship {
@@ -24,10 +26,13 @@ impl Ship {
             x: screen_width() / 2.0,
             y: screen_height() / 2.0,
             collided: false,
-            life: 3,
+            life: NB_LIFE,
         };
         let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
         let heart = load_texture("heart.png").await.expect("Couldn't load file");
+        let heart2 = load_texture("heart2.png")
+            .await
+            .expect("Couldn't load file");
         ship_texture.set_filter(FilterMode::Nearest);
 
         let ship_sprite = AnimatedSprite::new(
@@ -64,6 +69,7 @@ impl Ship {
             sound_laser,
             ship_texture,
             heart,
+            heart2,
         }
     }
 
@@ -73,8 +79,18 @@ impl Ship {
     }
 
     pub fn display(&self) {
-        for i in 1..=self.ship.life {
-            draw_texture(&self.heart, 180.0 + (i * 20) as f32, 20.0 as f32, WHITE);
+        let start_x = 180.0;
+        let y = 20.0;
+        let spacing = 20.0;
+
+        for i in 0..NB_LIFE {
+            let x = start_x + (i as f32 * spacing);
+            let texture = if i < self.ship.life {
+                &self.heart
+            } else {
+                &self.heart2
+            };
+            draw_texture(texture, x, y, WHITE);
         }
         let ship_frame = self.ship_sprite.frame();
         draw_texture_ex(
