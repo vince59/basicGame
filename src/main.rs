@@ -60,13 +60,13 @@ enum GameState {
     Playing,
     Paused,
     GameOver,
-    Won
+    Won,
 }
 
 enum Collision {
     BulletEnemy,
     ShipEnemy,
-    BuildingEnemy
+    BuildingEnemy,
 }
 
 fn window_conf() -> Conf {
@@ -132,7 +132,10 @@ async fn main() {
                 explosions.display();
 
                 if is_key_pressed(KeyCode::Space) {
-                    bullets.push(ship.shoot());
+                    if ship.nb_ammo > -1 {
+                        bullets.push(ship.shoot());
+                        ship.nb_ammo -= 1;
+                    }
                 }
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
@@ -147,7 +150,7 @@ async fn main() {
                             }
                             Collision::ShipEnemy => {
                                 enemy.collided = true;
-                                shape.life -=1;
+                                shape.life -= 1;
                                 if shape.life == -1 {
                                     game_state = GameState::GameOver;
                                 }

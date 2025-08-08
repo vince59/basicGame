@@ -8,14 +8,18 @@ use macroquad::prelude::*;
 
 const MOVEMENT_SPEED: f32 = 500.0;
 const NB_LIFE: i32 = 5;
+const NB_AMMO: i32 = 100;
 
 pub struct Ship {
     pub ship: Shape,
     pub ship_sprite: AnimatedSprite,
     pub sound_laser: Sound,
     ship_texture: Texture2D,
-    heart: Texture2D,
-    heart2: Texture2D,
+    heart_texture: Texture2D,
+    heart2_texture: Texture2D,
+    ammo_texture: Texture2D,
+    ammo2_texture: Texture2D,
+    pub nb_ammo:i32
 }
 
 impl Ship {
@@ -26,11 +30,15 @@ impl Ship {
             x: screen_width() / 2.0,
             y: screen_height() / 2.0,
             collided: false,
-            life: NB_LIFE,
+            life: NB_LIFE
         };
         let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
-        let heart = load_texture("heart.png").await.expect("Couldn't load file");
-        let heart2 = load_texture("heart2.png")
+        let heart_texture = load_texture("heart.png").await.expect("Couldn't load file");
+        let heart2_texture = load_texture("heart2.png")
+            .await
+            .expect("Couldn't load file");
+        let ammo_texture = load_texture("ammo.png").await.expect("Couldn't load file");
+        let ammo2_texture = load_texture("ammo2.png")
             .await
             .expect("Couldn't load file");
         ship_texture.set_filter(FilterMode::Nearest);
@@ -62,14 +70,18 @@ impl Ship {
         );
 
         let sound_laser = load_sound("laser.wav").await.unwrap();
+        let nb_ammo=NB_AMMO;
 
         Ship {
             ship,
             ship_sprite,
             sound_laser,
             ship_texture,
-            heart,
-            heart2,
+            heart_texture,
+            heart2_texture,
+            ammo_texture,
+            ammo2_texture,
+            nb_ammo
         }
     }
 
@@ -78,7 +90,7 @@ impl Ship {
         self.ship.y = screen_height() / 2.0;
     }
 
-    pub fn display(&self) {
+    fn display_life(&self){
         let start_x = 180.0;
         let y = 20.0;
         let spacing = 20.0;
@@ -86,12 +98,33 @@ impl Ship {
         for i in 0..NB_LIFE {
             let x = start_x + (i as f32 * spacing);
             let texture = if i < self.ship.life {
-                &self.heart
+                &self.heart_texture
             } else {
-                &self.heart2
+                &self.heart2_texture
             };
             draw_texture(texture, x, y, WHITE);
         }
+    }
+
+    fn display_ammo(&self){
+        let start_x = 182.0;
+        let y = 40.0;
+        let spacing = 22.0;
+
+        for i in 0..NB_AMMO/20 {
+            let x = start_x + (i as f32 * spacing);
+            let texture = if i < self.nb_ammo/20 {
+                &self.ammo_texture
+            } else {
+                &self.ammo2_texture
+            };
+            draw_texture(texture, x, y, WHITE);
+        }
+    }
+
+    pub fn display(&self) {
+        self.display_life();
+        self.display_ammo();
         let ship_frame = self.ship_sprite.frame();
         draw_texture_ex(
             &self.ship_texture,
