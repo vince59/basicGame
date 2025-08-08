@@ -4,6 +4,8 @@ use crate::{Collision, Shape};
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 
+const MAX_ENEMIES_NUMBER: u16 = 50;
+
 pub struct EnemiesSet {
     pub enemies: Vec<Shape>,
     enemy_small_sprite: AnimatedSprite,
@@ -12,6 +14,7 @@ pub struct EnemiesSet {
     enemy_small_texture: Texture2D,
     enemy_medium_texture: Texture2D,
     enemy_big_texture: Texture2D,
+    number: u16,
 }
 
 impl EnemiesSet {
@@ -63,7 +66,7 @@ impl EnemiesSet {
             .await
             .expect("Couldn't load file");
         enemy_big_texture.set_filter(FilterMode::Nearest);
-
+        let number = 0;
         EnemiesSet {
             enemies: vec![],
             enemy_small_texture,
@@ -71,16 +74,19 @@ impl EnemiesSet {
             enemy_big_texture,
             enemy_small_sprite,
             enemy_medium_sprite,
-            enemy_big_sprite
+            enemy_big_sprite,
+            number,
         }
     }
 
     pub fn display(&self) {
         for enemy in &self.enemies {
-            let (texture,frame) = match enemy.size {
-                _ if enemy.size <= 32.0 => (&self.enemy_small_texture,self.enemy_small_sprite.frame()),
-                33.0..=48.0 => (&self.enemy_medium_texture,self.enemy_medium_sprite.frame()),
-                _ => (&self.enemy_big_texture,self.enemy_big_sprite.frame()),
+            let (texture, frame) = match enemy.size {
+                _ if enemy.size <= 32.0 => {
+                    (&self.enemy_small_texture, self.enemy_small_sprite.frame())
+                }
+                33.0..=48.0 => (&self.enemy_medium_texture, self.enemy_medium_sprite.frame()),
+                _ => (&self.enemy_big_texture, self.enemy_big_sprite.frame()),
             };
             draw_texture_ex(
                 &texture,
@@ -104,15 +110,19 @@ impl EnemiesSet {
     // mise à jour de la positions des ennemis
     pub fn update(&mut self, delta_time: f32) {
         // ajout des ennemies : 5% de chance d'avoir un nouvel ennemie
-        if rand::gen_range(0, 99) >= 95 {
-            let size = rand::gen_range(16.0, 64.0);
-            self.enemies.push(Shape {
-                size,
-                speed: rand::gen_range(50.0, 150.0),
-                x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
-                y: -size,
-                collided: false,
-            });
+        if self.number < MAX_ENEMIES_NUMBER {
+            if rand::gen_range(0, 99) >= 95 {
+                let size = rand::gen_range(16.0, 64.0);
+                self.number+=1;
+                self.enemies.push(Shape {
+                    size,
+                    speed: rand::gen_range(50.0, 150.0),
+                    x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
+                    y: -size,
+                    collided: false,
+                    life: 0,
+                });
+            }
         }
         // on les fait tomber
         for enemy in &mut self.enemies {
@@ -130,13 +140,17 @@ impl EnemiesSet {
 
     pub fn collides_with<F>(&mut self, shape: &mut Shape, collision: &Collision, f: &mut F)
     where
-        F: FnMut(&mut Shape,&mut Shape, &Collision),
+        F: FnMut(&mut Shape, &mut Shape, &Collision),
     {
         for enemy in self.enemies.iter_mut() {
             if enemy.collides_with(&shape) {
                 enemy.collided = true;
-                f(enemy,shape,collision); // Appelle la callback pour faire d'autres choses en cas de collision
+                f(enemy, shape, collision); // Appelle la callback pour faire d'autres choses en cas de collision
             }
         }
+    }
+
+    pub fn all_destroyed(&mut self) -> bool {
+        self.number==MAX_ENEMIES_NUMBER && self.enemies.len()==0
     }
 }

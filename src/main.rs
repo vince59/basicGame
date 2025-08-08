@@ -2,7 +2,6 @@ mod buildings;
 mod bullets;
 mod enemies;
 mod explosions;
-mod fires;
 mod menu;
 mod music;
 mod score;
@@ -14,7 +13,6 @@ use buildings::*;
 use bullets::*;
 use enemies::*;
 use explosions::*;
-use fires::*;
 use menu::*;
 use music::*;
 use score::*;
@@ -34,6 +32,7 @@ pub struct Shape {
     x: f32,
     y: f32,
     collided: bool,
+    life: u32,
 }
 
 impl Shape {
@@ -61,13 +60,13 @@ enum GameState {
     Playing,
     Paused,
     GameOver,
+    Won
 }
 
 enum Collision {
     BulletEnemy,
     ShipEnemy,
-    BuildingEnemy,
-    FireEnemy,
+    BuildingEnemy
 }
 
 fn window_conf() -> Conf {
@@ -92,7 +91,6 @@ async fn main() {
     let mut enemies = EnemiesSet::new().await;
     let mut buildings = BuildingsSet::new().await;
     let mut ship = Ship::new().await;
-    let mut fires = FiresSet::new().await;
     let mut score = Score::new();
     let mut menu = Menu::new().await;
     build_textures_atlas();
@@ -114,7 +112,6 @@ async fn main() {
                     ship.reset();
                     score.reset();
                     theme_music.reset();
-                    fires.clear();
                     game_state = GameState::Playing;
                 };
                 menu.display(&mut play);
@@ -127,13 +124,11 @@ async fn main() {
                 explosions.update();
                 enemies.update(delta_time);
                 buildings.update();
-                fires.update(delta_time);
                 // affichages
                 enemies.display();
                 bullets.display();
                 score.display();
                 buildings.display();
-                fires.display();
                 explosions.display();
 
                 if is_key_pressed(KeyCode::Space) {
@@ -142,7 +137,6 @@ async fn main() {
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
-                let mut tmp_fires = fires.clone();
                 let mut collision_handler =
                     |enemy: &mut Shape, shape: &mut Shape, collision: &Collision| {
                         match collision {
@@ -153,15 +147,17 @@ async fn main() {
                             }
                             Collision::ShipEnemy => {
                                 enemy.collided = true;
-                                game_state = GameState::GameOver;
+                                shape.life -= if shape.life > 0 { 1 } else { 0 };
+                                if shape.life == 0 {
+                                    game_state = GameState::GameOver;
+                                }
                             }
                             Collision::BuildingEnemy => {
                                 explosions.push(enemy); // on ajoute une explosion
-                                shape.collided = true; // batiment touché
-                                //fires.push(&shape); // on met un feux à la place
-                            }
-                            Collision::FireEnemy => {
-                                explosions.push(enemy); // on ajoute une explosion
+                                shape.life -= if shape.life > 0 { 1 } else { 0 };
+                                if shape.life == 0 {
+                                    shape.collided = true; // batiment touché
+                                }
                             }
                         }
                     };
@@ -180,11 +176,6 @@ async fn main() {
                     );
                 }
 
-                // collision avec un feux
-                for fire in tmp_fires.get_list() {
-                    enemies.collides_with(fire, &Collision::FireEnemy, &mut collision_handler);
-                }
-
                 // collision avec le vaisseau
                 enemies.collides_with(
                     ship.get_shape(),
@@ -195,6 +186,11 @@ async fn main() {
                 //Tous les batiments détruits ?
                 if buildings.all_destroyed() {
                     game_state = GameState::GameOver;
+                }
+
+                //Tous les ennemis détruits ?
+                if enemies.all_destroyed() {
+                    game_state = GameState::Won;
                 }
             }
             GameState::Paused => {
@@ -208,7 +204,6 @@ async fn main() {
                 bullets.display();
                 score.display();
                 buildings.display();
-                fires.display();
                 display_paused();
                 display_game_name();
             }
@@ -218,6 +213,14 @@ async fn main() {
                     game_state = GameState::MainMenu;
                 }
                 display_game_over(&font);
+                score.display_high_score(&font);
+            }
+            GameState::Won => {
+                // Redémarrage du jeu si on presse espace
+                if is_key_pressed(KeyCode::LeftShift) {
+                    game_state = GameState::MainMenu;
+                }
+                display_won(&font);
                 score.display_high_score(&font);
             }
         }

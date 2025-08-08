@@ -25,7 +25,37 @@ pub fn display_game_over(font: &Font) {
     draw_text_ex(
         text,
         screen_width() / 2.0 - text_dimensions.width,
-        screen_height() / 2.0 + text_dimensions.height*2.0,
+        screen_height() / 2.0 + text_dimensions.height * 2.0,
+        text_params.clone(),
+    );
+}
+
+pub fn display_won(font: &Font) {
+    let text = "Congratulations, you won!";
+    let text_params = TextParams {
+        font_size: 50,
+        font: Some(font),
+        color: YELLOW,
+        font_scale: 1.0,
+        ..Default::default()
+    };
+    let text_dimensions = measure_text(
+        text,
+        text_params.font,
+        text_params.font_size,
+        text_params.font_scale,
+    );
+    draw_text_ex(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 2.0 + text_dimensions.height / 2.0,
+        text_params.clone(),
+    );
+    let text = "Press LeftShift to continue ...";
+    draw_text_ex(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 2.0 + text_dimensions.height * 2.0,
         text_params.clone(),
     );
 }

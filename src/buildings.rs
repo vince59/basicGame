@@ -28,6 +28,7 @@ impl BuildingData {
                 speed: 0.0,
                 size: cmp::max(self.height, self.width) as f32,
                 collided: false,
+                life:3
             },
             texture: self.texture.clone(),
             sprite: AnimatedSprite::new(

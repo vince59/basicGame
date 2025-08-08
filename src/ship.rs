@@ -13,6 +13,7 @@ pub struct Ship {
     pub ship_sprite: AnimatedSprite,
     pub sound_laser: Sound,
     ship_texture: Texture2D,
+    heart: Texture2D,
 }
 
 impl Ship {
@@ -23,8 +24,10 @@ impl Ship {
             x: screen_width() / 2.0,
             y: screen_height() / 2.0,
             collided: false,
+            life: 3,
         };
         let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
+        let heart = load_texture("heart.png").await.expect("Couldn't load file");
         ship_texture.set_filter(FilterMode::Nearest);
 
         let ship_sprite = AnimatedSprite::new(
@@ -60,6 +63,7 @@ impl Ship {
             ship_sprite,
             sound_laser,
             ship_texture,
+            heart,
         }
     }
 
@@ -69,6 +73,9 @@ impl Ship {
     }
 
     pub fn display(&self) {
+        for i in 1..=self.ship.life {
+            draw_texture(&self.heart, 180.0 + (i * 20) as f32, 20.0 as f32, WHITE);
+        }
         let ship_frame = self.ship_sprite.frame();
         draw_texture_ex(
             &self.ship_texture,
@@ -104,7 +111,7 @@ impl Ship {
         self.ship.y = clamp(
             self.ship.y,
             self.ship.size,
-            screen_height() - self.ship.size-110.0,
+            screen_height() - self.ship.size - 110.0,
         );
         self.display();
         self.ship_sprite.update();
@@ -118,10 +125,11 @@ impl Ship {
             speed: self.ship.speed * 2.0,
             size: 32.0,
             collided: false,
+            life: 0,
         }
     }
 
-    pub fn get_shape(&mut self) -> &mut Shape{
+    pub fn get_shape(&mut self) -> &mut Shape {
         &mut self.ship
     }
 }
